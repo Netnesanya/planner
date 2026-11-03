@@ -1,0 +1,95 @@
+<div
+  class="task-card"
+  [class.board-card]="board"
+  [class.is-done]="task.status === 'done'"
+  [class.selected]="selected"
+  [class.high-priority]="task.priority >= 4"
+  [draggable]="!disabled"
+  (dragstart)="drag($event)"
+  [style.--list-color]="color"
+  [style.background]="fill"
+  [attr.data-task-id]="task.id"
+>
+  <button
+    class="task-check"
+    [class.checked]="task.status === 'done'"
+    (click)="toggle.emit(task)"
+    [disabled]="disabled"
+    [attr.aria-label]="
+      (task.status === 'done' ? 'Вернуть в задачи: ' : 'Выполнить: ') +
+      task.title
+    "
+  >
+    @if (task.status === "done") {
+      <app-icon name="check" />
+    }
+  </button>
+  <div class="task-body">
+    <button class="task-title" (click)="edit.emit(task)">
+      {{ task.title }}
+    </button>
+    <div class="task-meta">
+      @if (task.start_time) {
+        <span class="task-time">{{ task.start_time }}</span>
+      }
+      @if (!task.is_milestone) {
+        <app-duration-picker
+          [value]="task.duration"
+          [compact]="true"
+          [disabled]="disabled"
+          [label]="'Длительность задачи ' + task.title"
+          (valueChange)="
+            taskChange.emit({ id: task.id, patch: { duration: $event } })
+          "
+        />
+      }
+      @if (task.is_milestone) {
+        <span class="milestone-label">◆ Майлстоун</span>
+      }
+      @if (linkedGoal; as goal) {
+        <span class="milestone-tag" [style.--tag-color]="color"
+          ># {{ goal.title }}</span
+        >
+      }
+      @if (task.subtasks.length) {
+        <span
+          ><app-icon name="checkcircle" />{{ doneSubtasks }}/{{
+            task.subtasks.length
+          }}</span
+        >
+      }
+      @if (task.recurrence !== "none") {
+        <app-icon name="repeat" />
+      }
+      @for (tag of task.tags.slice(0, 2); track tag) {
+        <span class="tag-chip" [class.lilac]="tag.length % 2 === 0">{{
+          tag
+        }}</span>
+      }
+    </div>
+    @if (task.progress_mode && task.progress_mode !== "none") {
+      <app-task-progress
+        [task]="task"
+        [disabled]="disabled"
+        (taskChange)="taskChange.emit($event)"
+      />
+    }
+  </div>
+  <div class="card-trailing">
+    <app-priority-stars
+      [value]="task.priority"
+      [disabled]="disabled"
+      (valueChange)="setPriority($event)"
+    /><span class="task-list-label"
+      ><i class="color-dot" [style.background]="list?.color"></i
+      >{{ list?.name }}</span
+    >
+  </div>
+  <button
+    class="icon-button task-more"
+    (click)="edit.emit(task)"
+    aria-label="Редактировать задачу"
+  >
+    <app-icon name="more" />
+  </button>
+</div>

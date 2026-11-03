@@ -1,0 +1,51 @@
+<div class="kanban-board">
+  @for (column of columns; track column.id) {
+    <section
+      class="kanban-column"
+      (dragover)="allowDrop($event)"
+      (drop)="dropStatus($event, column.id)"
+    >
+      <div class="kanban-heading">
+        <i class="color-dot" [style.background]="column.dot"></i>
+        <h2>{{ column.label }}</h2>
+        <span class="count-pill">{{ columnTasks(column.id).length }}</span
+        ><button
+          class="icon-button"
+          aria-label="Новая задача в колонке"
+          (click)="
+            openTask(
+              undefined,
+              undefined,
+              undefined,
+              column.id === 'done' ? 'todo' : column.id
+            )
+          "
+        >
+          <app-icon name="plus" />
+        </button>
+      </div>
+      @if (column.id !== "done" || store.preferences().showCompleted) {
+        @for (task of columnTasks(column.id); track task.id) {
+          <app-task-card
+            [board]="true"
+            [task]="task"
+            [list]="listById(task.list_id)"
+            [disabled]="store.busy()"
+            (edit)="openTask($event)"
+            (toggle)="toggle($event)"
+            (taskChange)="store.patchTask($event.id, $event.patch)"
+          />
+        } @empty {
+          <div class="kanban-empty">Перетащите задачу сюда</div>
+        }
+      } @else {
+        <button class="text-button" (click)="changeShowCompleted()">
+          Показать выполненные
+        </button>
+      }
+    </section>
+  }
+</div>
+<p class="view-hint">
+  Перетаскивайте задачи между колонками или меняйте статус в редакторе.
+</p>

@@ -1,0 +1,112 @@
+:host {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  color: inherit;
+}
+.task-progress {
+  width: 100%;
+  max-width: 340px;
+  padding-top: 4px;
+}
+.progress-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: calc(10px * var(--font-scale));
+  color: inherit;
+  line-height: 1.5;
+  margin-bottom: 5px;
+}
+.progress-caption > span:first-child {
+  opacity: 0.75;
+}
+.progress-amount {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.amount-button {
+  padding: 1px 3px;
+  border-bottom: 1px dashed currentColor;
+  color: inherit;
+  font-weight: 650;
+}
+.progress-amount input {
+  width: 85px;
+  font-size: inherit;
+  color: inherit;
+  background: #8882;
+  padding: 2px 4px;
+}
+.progress-slider {
+  display: block;
+  width: 100%;
+  height: 14px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+  cursor: ew-resize;
+  accent-color: currentColor;
+  appearance: none;
+}
+.progress-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 5px;
+  background: linear-gradient(
+    to right,
+    currentColor var(--ratio),
+    #8884 var(--ratio)
+  );
+}
+.progress-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+}
+.progress-slider:hover::-webkit-slider-thumb,
+.progress-slider:focus-visible::-webkit-slider-thumb {
+  opacity: 1;
+}
+.progress-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 5px;
+  background: #8884;
+}
+.progress-slider::-moz-range-progress {
+  background: currentColor;
+  height: 4px;
+  border-radius: 5px;
+}
+.progress-slider::-moz-range-thumb {
+  background: currentColor;
+  width: 10px;
+  height: 10px;
+  border: 0;
+}
+.progress-error {
+  color: #e79c9c;
+  display: block;
+  font-size: calc(10px * var(--font-scale));
+  margin-top: 5px;
+}
+@media (pointer: coarse) {
+  .progress-slider {
+    height: 26px;
+  }
+  .progress-slider::-webkit-slider-thumb {
+    opacity: 1;
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+  }
+}

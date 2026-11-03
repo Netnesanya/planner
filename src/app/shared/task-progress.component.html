@@ -1,0 +1,59 @@
+<div
+  class="task-progress"
+  (pointerdown)="$event.stopPropagation()"
+  (dragstart)="$event.preventDefault()"
+>
+  <div class="progress-caption">
+    <span>Прогресс</span>
+    @if (task.progress_mode === "target") {
+      <span class="progress-amount">
+        @if (editing) {
+          <input
+            #amountInput
+            type="text"
+            inputmode="decimal"
+            [value]="task.progress_value || 0"
+            aria-label="Выполненная часть цели"
+            (keydown)="amountKey($event, amountInput)"
+            (blur)="commitAmount(amountInput)"
+            (change)="$event.stopPropagation()"
+          />
+        } @else {
+          <button
+            type="button"
+            class="amount-button"
+            [disabled]="disabled"
+            (click)="startEdit()"
+            title="Изменить выполненную часть"
+          >
+            {{ format(task.progress_value || 0) }}
+          </button>
+        }
+        <span
+          >/ {{ format(task.progress_target || 100) }}
+          {{ task.progress_unit }}</span
+        >
+      </span>
+    } @else {
+      <span>{{ stage }}</span>
+    }
+  </div>
+  <input
+    class="progress-slider"
+    type="range"
+    min="0"
+    max="100"
+    step="1"
+    [value]="ratio"
+    [style.--ratio]="ratio + '%'"
+    [disabled]="disabled"
+    [attr.aria-label]="'Прогресс задачи ' + task.title"
+    [attr.aria-valuetext]="ratio + ' процентов'"
+    [title]="Math.round(ratio) + '%'"
+    (input)="preview = +$any($event.target).value"
+    (change)="saveRatio($event)"
+  />
+  @if (error) {
+    <span class="progress-error" role="alert">{{ error }}</span>
+  }
+</div>

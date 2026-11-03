@@ -1,0 +1,435 @@
+@if (draft; as form) {
+  <form class="cycle-setup panel" (ngSubmit)="saveCycle()">
+    <div class="section-heading">
+      <div>
+        <span class="eyebrow">НАПРАВЛЕНИЕ → ЦЕЛИ → ДЕЙСТВИЯ</span>
+        <h2>
+          {{
+            isExisting(form.id)
+              ? "Настройки цикла"
+              : "Ваш следующий 12-недельный год"
+          }}
+        </h2>
+      </div>
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="Закрыть настройки цикла"
+        (click)="draft = null"
+      >
+        <app-icon name="close" />
+      </button>
+    </div>
+    <div class="form-grid">
+      <label class="field-label"
+        >Название<input
+          name="cycleName"
+          [(ngModel)]="form.name"
+          maxlength="120"
+          required /></label
+      ><label class="field-label"
+        >Начало цикла<input
+          name="cycleStart"
+          type="date"
+          [(ngModel)]="form.start_date"
+          required
+          [disabled]="isExisting(form.id)"
+      /></label>
+    </div>
+    <label class="field-label"
+      >Зачем мне это?<textarea
+        name="vision"
+        [(ngModel)]="form.vision"
+        maxlength="5000"
+        rows="3"
+        placeholder="Как изменится моя жизнь и почему эти цели сейчас важны?"
+      ></textarea>
+    </label>
+    <p class="field-help">
+      12 недель по 7 дней. Выберите несколько важных результатов и конкретные
+      действия, которые приблизят к ним. Дата начала сохраняется, чтобы
+      недельные итоги оставались сопоставимыми.
+    </p>
+    <button class="primary-button" [disabled]="store.busy()">
+      {{ isExisting(form.id) ? "Сохранить цикл" : "Начать 12 недель" }}
+    </button>
+  </form>
+}
+@if (cycle; as c) {
+  <div class="cycle-toolbar">
+    <div>
+      <select
+        aria-label="Цикл планирования"
+        [(ngModel)]="selectedId"
+        (ngModelChange)="selectCycle()"
+      >
+        @for (item of store.cycles(); track item.id) {
+          <option [value]="item.id">
+            {{ item.name }}{{ item.archived ? " · завершён" : "" }}
+          </option>
+        }</select
+      ><span>{{ dateLabel(c.start_date) }} — {{ dateLabel(cycleEnd(c)) }}</span>
+    </div>
+    <div class="toolbar-buttons">
+      <button class="outline-button compact" (click)="editCycle()">
+        Настроить</button
+      ><button class="outline-button compact" (click)="createCycle()">
+        Новый цикл
+      </button>
+    </div>
+  </div>
+  <div class="cycle-intro">
+    <div>
+      <span class="cycle-status">{{ statusLabel }}</span>
+      <p>
+        {{
+          c.vision ||
+            "Добавьте своё «зачем» в настройках — оно поможет удерживать фокус."
+        }}
+      </p>
+    </div>
+    <span class="goal-count"
+      ><strong>{{ goals.length }}</strong> целей в фокусе</span
+    >
+  </div>
+  <div class="week-strip" aria-label="12 недель цикла">
+    @for (weekItem of weeks; track weekItem.index) {
+      <button
+        [class.selected]="week === weekItem.index"
+        [class.current]="
+          !c.archived && today >= weekItem.from && today <= weekItem.to
+        "
+        [attr.aria-pressed]="week === weekItem.index"
+        [attr.aria-label]="'Неделя ' + (weekItem.index + 1)"
+        (click)="selectWeek(weekItem.index)"
+      >
+        <span>НЕД</span><strong>{{ weekItem.index + 1 }}</strong
+        ><small>{{
+          dateLabel(weekItem.from, { day: "numeric", month: "short" })
+        }}</small
+        ><i><b [style.width.%]="weekItem.ratio || 0"></b></i>
+      </button>
+    }
+  </div>
+  <section class="goals-section">
+    <div class="section-heading">
+      <div>
+        <h2>Результаты, к которым вы идёте</h2>
+        <p>
+          Прогресс цели показывает результат. Галочки у действий — выполнение
+          плана.
+        </p>
+      </div>
+      <div class="toolbar-buttons">
+        <button class="outline-button compact" (click)="chooseGoals()">
+          Выбрать цели</button
+        ><button class="primary-button compact" (click)="newGoal()">
+          <app-icon name="plus" />Новая цель
+        </button>
+      </div>
+    </div>
+    @if (choosingGoals) {
+      <div class="panel goal-chooser">
+        <p>
+          Свяжите существующие цели с этим циклом. Обычно удобнее держать в
+          фокусе 1–3 результата.
+        </p>
+        @for (goal of availableGoals; track goal.id) {
+          <label
+            ><input
+              type="checkbox"
+              [checked]="chosenGoals.includes(goal.id)"
+              (change)="toggleGoal(goal.id)"
+            /><span
+              >{{ goal.title
+              }}<small>{{ listById(goal.list_id)?.name }}</small></span
+            ></label
+          >
+        } @empty {
+          <p class="muted">
+            Пока нет целей. Создайте новую или отметьте «Майлстоун» в любой
+            задаче.
+          </p>
+        }
+        <button
+          class="primary-button compact"
+          (click)="saveGoals()"
+          [disabled]="store.busy()"
+        >
+          Сохранить выбор
+        </button>
+      </div>
+    }
+    <div class="goal-cards">
+      @for (goal of goals; track goal.id) {
+        <app-task-card
+          [task]="goal"
+          [list]="listById(goal.list_id)"
+          [board]="true"
+          [disabled]="store.busy()"
+          (edit)="openTask($event)"
+          (toggle)="toggle($event)"
+          (taskChange)="store.patchTask($event.id, $event.patch)"
+        />
+      } @empty {
+        <div class="goal-empty">
+          ◆ Начните с результата: например, «Пожать свой вес к 1 января». Затем
+          запланируйте тренировки как связанные действия.
+        </div>
+      }
+    </div>
+    @if (outsideGoals) {
+      <p class="field-help">
+        {{ outsideGoals }} целей без даты или за пределами цикла. Их сроки можно
+        уточнить в карточках; связанные действия всё равно входят в недельный
+        план.
+      </p>
+    }
+  </section>
+  <div class="cycle-tabs" role="tablist" aria-label="План цикла">
+    <button
+      role="tab"
+      [attr.aria-selected]="tab === 'week'"
+      (click)="setTab('week')"
+    >
+      План недели</button
+    ><button
+      role="tab"
+      [attr.aria-selected]="tab === 'timeline'"
+      (click)="setTab('timeline')"
+    >
+      Горизонт целей</button
+    ><button
+      role="tab"
+      [attr.aria-selected]="tab === 'review'"
+      (click)="setTab('review')"
+    >
+      Итоги недели
+    </button>
+  </div>
+  @if (tab === "timeline") {
+    <app-timeline-view
+      [tasks]="goals"
+      [startDate]="c.start_date"
+      [fixedRange]="true"
+      (open)="openFromTimeline($event)"
+    />
+  } @else {
+    <div class="week-heading">
+      <div>
+        <h2>
+          Неделя {{ week + 1 }}
+          <span>· {{ dateLabel(score.from) }} — {{ dateLabel(score.to) }}</span>
+        </h2>
+        <p>
+          {{
+            inFuture(score.from)
+              ? "Планируем будущую неделю"
+              : "Действия, связанные с целями этого цикла"
+          }}
+        </p>
+      </div>
+      <div class="execution-score">
+        <strong>{{ score.ratio === null ? "—" : score.ratio + "%" }}</strong
+        ><span
+          >{{ score.done }} / {{ score.total }} действий<small
+            >выполнение плана · ориентир 85%</small
+          ></span
+        >
+      </div>
+    </div>
+    @if (tab === "week") {
+      <div class="week-actions">
+        <button
+          class="outline-button"
+          (click)="showActions()"
+          [disabled]="!goals.length"
+        >
+          <app-icon name="plus" />Запланировать действия</button
+        ><span class="muted small"
+          >Незапланированная рутина не влияет на этот показатель.</span
+        >
+      </div>
+      @if (actionForm) {
+        <form class="panel action-form" (ngSubmit)="saveActions()">
+          <h3>Регулярные шаги к цели</h3>
+          <div class="form-grid">
+            <label class="field-label"
+              >Действие<input
+                name="actionTitle"
+                [(ngModel)]="actionTitle"
+                placeholder="Например, силовая тренировка"
+                required
+                maxlength="500" /></label
+            ><label class="field-label"
+              >Для цели<select
+                name="actionGoal"
+                [(ngModel)]="actionGoal"
+                required
+              >
+                @for (goal of goals; track goal.id) {
+                  <option [value]="goal.id">{{ goal.title }}</option>
+                }
+              </select></label
+            >
+          </div>
+          <div class="days-picker">
+            @for (day of days; track day; let i = $index) {
+              <button
+                type="button"
+                [attr.aria-pressed]="actionDays.includes(i)"
+                (click)="toggleDay(i)"
+              >
+                {{ day }}
+              </button>
+            }
+          </div>
+          <div class="action-range">
+            <label class="field-label"
+              >С недели<input
+                type="number"
+                name="firstWeek"
+                [(ngModel)]="firstWeek"
+                min="1"
+                max="12"
+                required /></label
+            ><label class="field-label"
+              >По неделю<input
+                type="number"
+                name="lastWeek"
+                [(ngModel)]="lastWeek"
+                min="1"
+                max="12"
+                required
+            /></label>
+            <div class="field-label">
+              Длительность<app-duration-picker
+                [value]="actionDuration"
+                (valueChange)="actionDuration = $event"
+                (validChange)="actionDurationValid = $event"
+              />
+            </div>
+          </div>
+          <p class="field-help">
+            Будет создано {{ actionCount }} отдельных действий. Их можно
+            распределить по времени в календаре. Пропуски останутся в плане.
+          </p>
+          <div class="toolbar-buttons">
+            <button
+              type="button"
+              class="outline-button"
+              (click)="actionForm = false"
+            >
+              Отмена</button
+            ><button
+              class="primary-button"
+              [disabled]="store.busy() || !actionCount || !actionDurationValid"
+            >
+              Добавить {{ actionCount }} действий
+            </button>
+          </div>
+        </form>
+      }
+      <div class="weekly-tasks">
+        @for (task of score.tasks; track task.id) {
+          <div class="weekly-task">
+            <div class="weekly-task-context">
+              <span>{{
+                dateLabel(task.due_date!, {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                })
+              }}</span
+              ><span>◆ {{ goalTitle(task) }}</span>
+            </div>
+            <app-task-card
+              [task]="task"
+              [list]="listById(task.list_id)"
+              [disabled]="store.busy()"
+              (edit)="openTask($event)"
+              (toggle)="toggle($event)"
+              (taskChange)="store.patchTask($event.id, $event.patch)"
+            />
+          </div>
+        } @empty {
+          <div class="week-empty">
+            <app-icon name="calendar" />
+            <h3>Какие шаги приблизят к цели?</h3>
+            <p>
+              Запланируйте действия выше или свяжите существующие задачи с целью
+              в их карточках. Здесь появятся действия с датами этой недели.
+            </p>
+          </div>
+        }
+      </div>
+    } @else {
+      <form class="panel review-form" (ngSubmit)="saveReview()">
+        <div class="form-grid">
+          <label class="field-label"
+            >Что получилось?<textarea
+              name="wins"
+              [(ngModel)]="reviewWins"
+              rows="5"
+              maxlength="5000"
+              placeholder="Результаты, маленькие победы, полезные наблюдения"
+            ></textarea></label
+          ><label class="field-label"
+            >Что изменю на следующей неделе?<textarea
+              name="improve"
+              [(ngModel)]="reviewImprove"
+              rows="5"
+              maxlength="5000"
+              placeholder="Что мешало? Как скорректирую действия или расписание?"
+            ></textarea>
+          </label>
+        </div>
+        <p class="field-help">
+          Сравните выполнение действий с прогрессом целей. 85% — ориентир
+          регулярности, а не гарантия результата. Обсудите итоги с партнёром,
+          если вам помогает такая поддержка.
+        </p>
+        <button class="primary-button" [disabled]="store.busy()">
+          Сохранить итоги недели
+        </button>
+      </form>
+      <div class="cycle-retro">
+        <div>
+          <h3>
+            {{ c.archived ? "Цикл в истории" : "Когда 12 недель позади" }}
+          </h3>
+          <p>
+            Подведите итоги, отметьте достижения и оставьте время на
+            восстановление и планирование следующего цикла.
+          </p>
+        </div>
+        <button
+          class="outline-button"
+          (click)="archive()"
+          [disabled]="store.busy()"
+        >
+          {{ c.archived ? "Возобновить цикл" : "Завершить цикл" }}
+        </button>
+      </div>
+    }
+  }
+} @else if (!draft) {
+  <section class="cycle-welcome panel">
+    <span class="welcome-number">12<span>недель</span></span>
+    <h2>Большие цели. Понятные шаги на каждую неделю.</h2>
+    <p>
+      Определите важные результаты, выделите время на действия и раз в неделю
+      оцените, что работает.
+    </p>
+    <div class="welcome-steps">
+      <span><b>01</b> Сформулируйте цель</span
+      ><span><b>02</b> Спланируйте действия</span
+      ><span><b>03</b> Подведите итоги</span>
+    </div>
+    <button class="primary-button" (click)="createCycle()">
+      Создать первый цикл</button
+    ><a href="https://12weekyear.com/" target="_blank" rel="noopener noreferrer"
+      >О методике The 12 Week Year ↗</a
+    >
+  </section>
+}

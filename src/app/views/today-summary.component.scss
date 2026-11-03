@@ -1,0 +1,134 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 1120px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 80px;
+  padding: 13px 16px;
+  border: 1px solid #30333a;
+  border-radius: 9px;
+  background: #202328;
+
+  > div:not(.micro-progress) {
+    min-width: 0;
+  }
+  .summary-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    app-icon {
+      width: 25px;
+      height: 25px;
+    }
+  }
+  .stat-label {
+    margin-bottom: 5px;
+    font-size: calc(10px * var(--font-scale));
+    line-height: 1.4;
+  }
+  strong {
+    font-size: calc(21px * var(--font-scale));
+    font-weight: 650;
+    letter-spacing: -0.5px;
+    line-height: 1.25;
+    small {
+      color: #9da1ab;
+      font-size: calc(10px * var(--font-scale));
+      font-weight: 450;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+  }
+}
+
+.micro-progress {
+  width: 42px;
+  height: 4px;
+  margin-left: auto;
+  border-radius: 4px;
+  background: #39443d;
+  flex-shrink: 0;
+  i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--mint);
+  }
+}
+.tiny-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 30px;
+  margin-left: auto;
+  flex-shrink: 0;
+  i {
+    width: 4px;
+    border-radius: 2px;
+    background: #39403b;
+  }
+  i.filled {
+    background: #a5c8ac;
+  }
+}
+
+@media (max-width: 1200px) {
+  .summary-card {
+    padding: 12px;
+    gap: 10px;
+  }
+  .summary-card .summary-icon {
+    width: 34px;
+    height: 34px;
+    app-icon {
+      width: 23px;
+      height: 23px;
+    }
+  }
+  .micro-progress,
+  .tiny-bars {
+    display: none;
+  }
+}
+@media (max-width: 1000px) and (min-width: 761px) {
+  .summary-card .summary-icon {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .summary-row {
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .summary-card {
+    padding: 12px 9px;
+    align-items: center;
+    min-height: 78px;
+    .summary-icon {
+      display: none;
+    }
+    .stat-label {
+      font-size: calc(8px * var(--font-scale));
+      margin-bottom: 7px;
+    }
+    strong {
+      font-size: calc(17px * var(--font-scale));
+      white-space: normal;
+      small {
+        font-size: calc(8px * var(--font-scale));
+      }
+    }
+  }
+}

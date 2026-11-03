@@ -1,0 +1,41 @@
+<div class="history-toolbar">
+  <span class="muted">{{ completed.length }} выполненных задач</span
+  ><button class="outline-button" (click)="store.exportData()">
+    <app-icon name="download" />Экспорт данных
+  </button>
+</div>
+<section class="history-list">
+  @for (group of historyGroups; track group.date) {
+    <div class="group-heading">
+      <app-icon name="checkcircle" />
+      <h2>
+        {{
+          group.date === today
+            ? "Сегодня"
+            : dateLabel(group.date, {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })
+        }}
+      </h2>
+      <span class="count-pill">{{ group.tasks.length }}</span>
+    </div>
+    @for (task of group.tasks; track task.id) {
+      <app-task-card
+        [task]="task"
+        [list]="listById(task.list_id)"
+        [disabled]="store.busy()"
+        (edit)="openTask($event)"
+        (toggle)="toggle($event)"
+        (taskChange)="store.patchTask($event.id, $event.patch)"
+      />
+    }
+  } @empty {
+    <div class="empty-state">
+      <span class="empty-icon"><app-icon name="checkcircle" /></span>
+      <h3>Здесь появятся ваши победы</h3>
+      <p>Завершите первую задачу — мы сохраним её в истории.</p>
+    </div>
+  }
+</section>

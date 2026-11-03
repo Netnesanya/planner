@@ -1,0 +1,43 @@
+:host {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.priority-stars {
+  display: inline-flex;
+  gap: 1px;
+  color: inherit;
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 23px;
+    padding: 2px;
+    color: inherit;
+    opacity: 0.28;
+    border-radius: 3px;
+    svg {
+      width: 13px;
+      height: 13px;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      fill: none;
+    }
+    &.filled {
+      opacity: 0.9;
+      svg {
+        fill: currentColor;
+      }
+    }
+    &:hover {
+      opacity: 1;
+      background: #7772;
+    }
+  }
+}
+@media (pointer: coarse) {
+  .priority-stars button {
+    width: 27px;
+    height: 32px;
+  }
+}

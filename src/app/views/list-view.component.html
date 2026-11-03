@@ -1,0 +1,160 @@
+<div class="list-layout" [class.with-agenda]="scope === 'today' && !search">
+  <section class="task-list-content">
+    @if (search) {
+      <div class="search-result-label">
+        Поиск: «{{ search }}» · {{ filteredTasks.length }} найдено
+      </div>
+    }
+    @for (group of groups; track group.name) {
+      <section class="task-group">
+        <div
+          class="group-heading"
+          [class.overdue]="group.name === 'Просрочено'"
+        >
+          <app-icon name="down" />
+          <h2>{{ group.name }}</h2>
+          <span class="count-pill">{{ group.tasks.length }}</span
+          ><span class="group-duration">{{
+            duration(group.tasks.reduce(sumDuration, 0))
+          }}</span
+          ><button
+            class="icon-button"
+            [attr.aria-label]="'Добавить задачу: ' + group.name"
+            (click)="openTask(undefined, group.tasks[0].due_date || today)"
+          >
+            <app-icon name="plus" />
+          </button>
+        </div>
+        @for (task of group.tasks; track task.id) {
+          <app-task-card
+            [class.drop-target]="dropTarget === task.id"
+            (dragover)="allowDrop($event); dropTarget = task.id"
+            (dragleave)="dropTarget = null"
+            (drop)="reorder($event, task)"
+            [task]="task"
+            [list]="listById(task.list_id)"
+            [disabled]="store.busy()"
+            (edit)="openTask($event)"
+            (toggle)="toggle($event)"
+            (taskChange)="store.patchTask($event.id, $event.patch)"
+          />
+        }
+      </section>
+    }
+    @if (!pending.length) {
+      <div class="empty-state">
+        <span class="empty-icon"><app-icon name="leaf" /></span>
+        <h3>{{ search ? "Ничего не нашлось" : "Можно выдохнуть" }}</h3>
+        <p>
+          {{
+            search
+              ? "Попробуйте другое название или тег."
+              : "Здесь пока нет задач. Оставьте место для важного."
+          }}
+        </p>
+      </div>
+    }
+    <button class="add-task-inline" (click)="openTask()">
+      <app-icon name="plus" />Добавить задачу<span>нажмите N</span>
+    </button>
+    @if (completed.length) {
+      <section class="completed-section">
+        <button class="group-heading" (click)="changeShowCompleted()">
+          <app-icon
+            [name]="store.preferences().showCompleted ? 'down' : 'chevron'"
+          />
+          <h2>Выполнено</h2>
+          <span class="count-pill">{{ completed.length }}</span
+          ><span class="done-line"></span>
+        </button>
+        @if (store.preferences().showCompleted) {
+          @for (task of completed; track task.id) {
+            <app-task-card
+              [task]="task"
+              [list]="listById(task.list_id)"
+              [disabled]="store.busy()"
+              (edit)="openTask($event)"
+              (toggle)="toggle($event)"
+              (taskChange)="store.patchTask($event.id, $event.patch)"
+            />
+          }
+        }
+      </section>
+    }
+    <div class="list-footnote">
+      <app-icon name="leaf" />Не нужно успевать всё. Достаточно двигаться к
+      своему.
+    </div>
+  </section>
+  @if (scope === "today" && !search) {
+    <aside class="day-agenda">
+      <div class="agenda-header">
+        <h2>Мой день</h2>
+        <app-icon name="sun" />
+      </div>
+      <p class="muted small">
+        {{
+          dateLabel(today, { weekday: "long", day: "numeric", month: "long" })
+        }}
+      </p>
+      <div class="day-progress">
+        <div class="progress-ring" [style.--progress]="todayStats.rate + '%'">
+          <div>
+            <strong>{{ todayStats.rate }}<small>%</small></strong
+            ><span>выполнено</span>
+          </div>
+        </div>
+        <div class="progress-caption">
+          {{
+            todayStats.pending.length
+              ? "Всё идёт своим чередом"
+              : "Отличная работа"
+          }}<span>{{
+            todayStats.pending.length
+              ? "Ещё " + todayStats.pending.length + " задач на сегодня"
+              : "Все планы на сегодня завершены"
+          }}</span>
+        </div>
+      </div>
+      <div class="agenda-section-title">
+        РАСПИСАНИЕ <span>{{ duration(plannedMinutes) }}</span>
+      </div>
+      <div class="mini-agenda">
+        @for (task of todayScheduled; track task.id) {
+          <button
+            class="agenda-event"
+            [class.done]="task.status === 'done'"
+            (click)="openTask(task)"
+          >
+            <span class="agenda-time">{{ task.start_time }}</span
+            ><i [style.background]="listById(task.list_id)?.color"></i
+            ><span
+              ><strong>{{ task.title }}</strong
+              ><small
+                >{{ duration(task.duration) }} ·
+                {{ listById(task.list_id)?.name }}</small
+              ></span
+            >
+            @if (task.status === "done") {
+              <app-icon name="check" />
+            }
+          </button>
+        } @empty {
+          <p class="muted small">
+            Добавьте время в задаче, чтобы увидеть её здесь.
+          </p>
+        }
+      </div>
+      <button class="agenda-calendar" (click)="calendar.emit()">
+        Открыть календарь<app-icon name="arrow" />
+      </button>
+      <div class="focus-note">
+        <app-icon name="leaf" /><span
+          >Ваш день. Ваш темп.<br /><small
+            >Оставьте немного времени для себя.</small
+          ></span
+        >
+      </div>
+    </aside>
+  }
+</div>

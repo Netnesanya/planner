@@ -1,0 +1,226 @@
+<div class="calendar-toolbar">
+  <div class="date-navigation">
+    <h2>{{ calendarTitle }}</h2>
+    <button
+      class="icon-button previous"
+      aria-label="Предыдущий период"
+      (click)="shiftDate(-1)"
+    >
+      <app-icon name="chevron" /></button
+    ><button
+      class="icon-button"
+      aria-label="Следующий период"
+      (click)="shiftDate(1)"
+    >
+      <app-icon name="chevron" /></button
+    ><button class="outline-button compact" (click)="selectedDate = today">
+      Сегодня
+    </button>
+  </div>
+  <div class="segmented">
+    @for (mode of calendarModes; track mode.id) {
+      <button
+        [class.active]="calendarMode === mode.id"
+        (click)="setCalendarMode(mode.id)"
+      >
+        {{ mode.label }}
+      </button>
+    }
+  </div>
+</div>
+@if (calendarMode === "month") {
+  <div class="month-view">
+    <div class="month-weekdays">
+      @for (day of weekdays; track day) {
+        <span>{{ day }}</span>
+      }
+    </div>
+    <div class="month-grid">
+      @for (date of monthDays; track date) {
+        <div
+          class="month-cell"
+          [class.outside]="date.slice(0, 7) !== selectedDate.slice(0, 7)"
+          (dragover)="allowDrop($event)"
+          (drop)="dropDate($event, date)"
+        >
+          <button
+            class="month-date"
+            [class.is-today]="date === today"
+            (click)="openTask(undefined, date)"
+          >
+            {{ +date.slice(8) }}
+          </button>
+          @for (task of dateTasks(date).slice(0, 4); track task.id) {
+            <button
+              class="month-task"
+              [style.--event-color]="taskColor(task)"
+              [class.done]="task.status === 'done'"
+              draggable="true"
+              (dragstart)="drag($event, task)"
+              (click)="openTask(task)"
+            >
+              <i></i>{{ task.start_time }} {{ task.title }}
+            </button>
+          }
+          @if (dateTasks(date).length > 4) {
+            <button
+              class="month-more"
+              (click)="selectedDate = date; setCalendarMode('day')"
+            >
+              Ещё {{ dateTasks(date).length - 4 }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+} @else {
+  <div class="calendar-frame">
+    <div class="calendar-day-headers" [style.--days]="calendarDays.length">
+      <div class="timezone-label">{{ timezoneLabel }}</div>
+      @for (date of calendarDays; track date) {
+        <div class="calendar-day-title" [class.today-column]="date === today">
+          <span>{{ dateLabel(date, { weekday: "short" }) }}</span
+          ><strong [class.is-today]="date === today">{{
+            +date.slice(8)
+          }}</strong>
+        </div>
+      }
+    </div>
+    <div class="calendar-all-day" [style.--days]="calendarDays.length">
+      <span>Без времени</span>
+      @for (date of calendarDays; track date) {
+        <div (dragover)="allowDrop($event)" (drop)="dropAllDay($event, date)">
+          @for (task of dateTasks(date, false); track task.id) {
+            <button
+              class="all-day-task"
+              [attr.data-task-id]="task.id"
+              [style.--event-color]="taskColor(task)"
+              (pointerdown)="startMove($event, task)"
+              (dragstart)="$event.preventDefault()"
+              (click)="!ignoreClick && openTask(task)"
+            >
+              {{ task.title }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+    <div class="calendar-scroll">
+      <div class="time-grid" [style.--days]="calendarDays.length">
+        <div class="hour-labels">
+          @for (hour of hours; track hour) {
+            <span>{{ hour.toString().padStart(2, "0") }}:00</span>
+          }
+        </div>
+        @for (date of calendarDays; track date) {
+          <div
+            class="calendar-day-column"
+            [class.today-column]="date === today"
+          >
+            @for (hour of hours; track hour) {
+              <button
+                class="hour-cell"
+                [attr.aria-label]="
+                  'Добавить задачу ' + date + ' в ' + hour + ':00'
+                "
+                (click)="
+                  openTask(
+                    undefined,
+                    date,
+                    hour.toString().padStart(2, '0') + ':00'
+                  )
+                "
+                (dragover)="allowDrop($event)"
+                (drop)="dropTime($event, date, hour)"
+              ></button>
+            }
+            @for (event of events(date); track event.task.id) {
+              <div
+                class="calendar-event"
+                [attr.data-task-id]="event.task.id"
+                [class.done]="event.task.status === 'done'"
+                [class.resizing]="resizing()?.task?.id === event.task.id"
+                [class.drag-source]="
+                  moving()?.active && moving()?.task?.id === event.task.id
+                "
+                [style.--event-color]="taskColor(event.task)"
+                [style.background]="eventFill(event.task)"
+                [style.color]="eventText(event.task)"
+                [style.top.px]="event.top"
+                [style.height.px]="event.height"
+                [style.left.%]="event.left"
+                [style.width.%]="event.width"
+              >
+                <button
+                  class="event-body"
+                  (pointerdown)="startMove($event, event.task)"
+                  (click)="!ignoreClick && openTask(event.task)"
+                  (dragstart)="$event.preventDefault()"
+                >
+                  <strong>{{ event.task.title }}</strong
+                  ><span
+                    >{{ event.task.start_time }} ·
+                    {{ duration(event.task.duration) }}</span
+                  >
+                </button>
+                <button
+                  class="event-resize"
+                  aria-label="Изменить длительность перетаскиванием"
+                  [title]="
+                    'Длительность: ' +
+                    duration(event.task.duration) +
+                    ' · тяните край или нажимайте ↑ / ↓'
+                  "
+                  (pointerdown)="startResize($event, event.task)"
+                  (keydown)="resizeKey($event, event.task)"
+                  (click)="$event.stopPropagation()"
+                  (dragstart)="$event.preventDefault()"
+                >
+                  <i></i>
+                </button>
+                @if (resizing()?.task?.id === event.task.id) {
+                  <span class="resize-label">{{
+                    duration(event.task.duration)
+                  }}</span>
+                }
+              </div>
+            }
+            @if (moving(); as move) {
+              @if (move.active && move.date === date) {
+                <div
+                  class="move-preview"
+                  [style.top.px]="(move.minute / 60) * 64"
+                  [style.height.px]="(move.task.duration / 60) * 64"
+                >
+                  <strong>{{ move.task.title }}</strong
+                  ><span
+                    >{{ timeLabel(move.minute) }} —
+                    {{ timeLabel(move.minute + move.task.duration) }}</span
+                  ><output class="move-time"
+                    >{{ timeLabel(move.minute) }} —
+                    {{ timeLabel(move.minute + move.task.duration) }}</output
+                  >
+                </div>
+              }
+            }
+            @if (date === today) {
+              <div
+                class="current-time-line"
+                [style.top.px]="
+                  ((now().getHours() * 60 + now().getMinutes()) / 60) * 64
+                "
+              >
+                <i></i>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}
+<p class="view-hint">
+  Перетащите задачу на другое время. Потяните нижний край, чтобы изменить
+  длительность (шаг 15 минут).
+</p>

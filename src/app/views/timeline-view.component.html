@@ -1,0 +1,128 @@
+<div class="calendar-toolbar">
+  <div class="date-navigation">
+    <h2>{{ dateLabel(start) }} — {{ dateLabel(end) }}</h2>
+    @if (!fixedRange) {
+      <button
+        class="icon-button previous"
+        aria-label="Таймлайн на месяц назад"
+        (click)="shiftDate(-1)"
+      >
+        <app-icon name="chevron" />
+      </button>
+      <button
+        class="icon-button"
+        aria-label="Таймлайн на месяц вперёд"
+        (click)="shiftDate(1)"
+      >
+        <app-icon name="chevron" />
+      </button>
+      <button class="outline-button compact" (click)="selectedDate = today">
+        Сегодня
+      </button>
+    }
+  </div>
+  <span class="muted small">◆ Цели · 12 недель</span>
+</div>
+@if (!fixedRange) {
+  <label class="jump-date"
+    >Перейти к дате
+    <input type="date" aria-label="Дата таймлайна" [(ngModel)]="selectedDate"
+  /></label>
+}
+<div class="timeline-scroll">
+  <div class="timeline-table">
+    <div class="timeline-header">
+      <div class="list-heading">СПИСОК / НАПРАВЛЕНИЕ</div>
+      <div class="week-grid">
+        @for (week of weeks; track week; let i = $index) {
+          <div
+            class="week-heading"
+            [class.current]="
+              today >= week && today < (weeks[i + 1] || end + '~')
+            "
+          >
+            <small>{{
+              fixedRange
+                ? "Неделя " + (i + 1)
+                : dateLabel(week, { month: "short" })
+            }}</small
+            ><strong>{{
+              dateLabel(week, { day: "numeric", month: "short" })
+            }}</strong>
+          </div>
+        }
+      </div>
+    </div>
+    @for (list of store.lists(); track list.id) {
+      <div class="timeline-row" [attr.data-list-id]="list.id">
+        <div class="timeline-list">
+          <i class="color-dot" [style.background]="list.color"></i
+          ><span
+            >{{ list.name
+            }}<small>{{ countGoals(list.id) }} целей в периоде</small></span
+          ><button
+            class="icon-button"
+            [attr.aria-label]="'Добавить цель в ' + list.name"
+            (click)="createGoal(list.id)"
+          >
+            <app-icon name="plus" />
+          </button>
+        </div>
+        <div class="week-grid">
+          @for (week of weeks; track week) {
+            <div
+              class="milestone-cell"
+              [attr.data-week]="week"
+              (dragover)="allowDrop($event)"
+              (drop)="dropGoal($event, list.id, week)"
+            >
+              @for (task of goalsInWeek(list.id, week); track task.id) {
+                <button
+                  class="milestone"
+                  [class.done]="task.status === 'done'"
+                  [style.--goal-color]="taskColor(task)"
+                  [attr.data-task-id]="task.id"
+                  [title]="task.title + ' · ' + dateLabel(task.due_date!)"
+                  draggable="true"
+                  (dragstart)="drag($event, task)"
+                  (click)="openTask(task)"
+                >
+                  <span class="milestone-date"
+                    >◆
+                    {{
+                      dateLabel(task.due_date!, {
+                        day: "numeric",
+                        month: "short",
+                      })
+                    }}</span
+                  ><strong>{{ task.title }}</strong
+                  ><small>{{ result(task) }}</small>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>
+@if (undated.length) {
+  <div class="undated-goals">
+    <span>Без даты</span>
+    @for (task of undated; track task.id) {
+      <button
+        class="outline-button compact"
+        draggable="true"
+        (dragstart)="drag($event, task)"
+        (click)="openTask(task)"
+      >
+        ◆ {{ task.title }}
+      </button>
+    }
+  </div>
+}
+<p class="view-hint">
+  Каждая строка — ваш список. Отметьте «Майлстоун» в карточке, чтобы увидеть
+  результат на горизонте. Перенос между неделями сохраняет день недели; точную
+  дату можно изменить в карточке.
+</p>

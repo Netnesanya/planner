@@ -1,0 +1,60 @@
+<div
+  class="duration-control"
+  [class.compact]="compact"
+  (pointerdown)="$event.stopPropagation()"
+  (dragstart)="$event.preventDefault()"
+>
+  @if (compact) {
+    <app-icon name="clock" (click)="focus()" />
+  }
+  <input
+    #input
+    type="text"
+    role="combobox"
+    autocomplete="off"
+    maxlength="25"
+    [value]="draft"
+    [disabled]="disabled"
+    [attr.aria-label]="label"
+    [attr.aria-expanded]="opened"
+    [attr.aria-controls]="id"
+    aria-autocomplete="none"
+    aria-haspopup="listbox"
+    [attr.aria-invalid]="!!error"
+    [attr.aria-activedescendant]="active >= 0 ? id + '-' + active : null"
+    (focus)="show(); input.select()"
+    (click)="show()"
+    (input)="inputChanged(input.value)"
+    (blur)="commit()"
+    (keydown)="key($event)"
+  />
+  <app-icon name="down" class="chevron" (click)="focus()" />
+</div>
+<div
+  #menu
+  class="duration-menu"
+  popover="manual"
+  [id]="id"
+  (pointerdown)="$event.preventDefault(); $event.stopPropagation()"
+>
+  <span class="menu-label">Длительность</span>
+  <div class="preset-grid" role="listbox" aria-label="Варианты длительности">
+    @for (minutes of presets; track minutes; let i = $index) {
+      <button
+        type="button"
+        role="option"
+        tabindex="-1"
+        [id]="id + '-' + i"
+        [attr.aria-selected]="value === minutes"
+        [class.active]="active === i"
+        (click)="choose(minutes)"
+      >
+        {{ duration(minutes) }}
+      </button>
+    }
+  </div>
+  <p>Или введите своё: 90, 1:30, 1,5ч</p>
+</div>
+@if (error) {
+  <span class="duration-error" role="alert">{{ error }}</span>
+}

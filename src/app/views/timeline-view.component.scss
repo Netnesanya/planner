@@ -1,0 +1,150 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.jump-date {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 16px;
+  input {
+    width: auto;
+    padding: 6px 10px;
+  }
+}
+.timeline-scroll {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.timeline-table {
+  min-width: 1580px;
+}
+.timeline-header,
+.timeline-row {
+  display: grid;
+  grid-template-columns: 195px 1fr;
+}
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+.list-heading,
+.week-heading {
+  padding: 16px 12px;
+  background: #20242a;
+  font-size: 11px;
+  color: var(--muted);
+}
+.week-heading {
+  border-left: 1px solid var(--line);
+  small {
+    display: block;
+    font-size: 10px;
+    margin-bottom: 6px;
+  }
+  strong {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  &.current {
+    background: #b9efc90e;
+    strong {
+      color: var(--mint);
+    }
+  }
+}
+.list-heading,
+.timeline-list {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  border-right: 1px solid var(--line);
+}
+.timeline-row {
+  border-top: 1px solid var(--line);
+  min-height: 114px;
+}
+.timeline-list {
+  background: #1c2025;
+  padding: 16px 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  span {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  small {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 7px;
+  }
+  button {
+    flex-shrink: 0;
+    width: 24px;
+  }
+}
+.milestone-cell {
+  padding: 10px 5px;
+  border-right: 1px solid #ffffff07;
+  min-width: 0;
+  &:hover {
+    background: #b9efc906;
+  }
+}
+.milestone {
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+  margin-bottom: 7px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--goal-color) 22%, transparent);
+  background: color-mix(in srgb, var(--goal-color) 7%, #20242a);
+  cursor: grab;
+  .milestone-date {
+    color: var(--goal-color);
+    font-size: 10px;
+  }
+  strong {
+    font-size: 12px;
+    font-weight: 500;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.5;
+    margin: 7px 0;
+    overflow-wrap: anywhere;
+  }
+  small {
+    color: var(--muted);
+    font-size: 10px;
+    display: block;
+    overflow-wrap: anywhere;
+  }
+  &:hover {
+    border-color: var(--goal-color);
+  }
+  &.done {
+    opacity: 0.6;
+    strong {
+      text-decoration: line-through;
+    }
+  }
+}
+.undated-goals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--muted);
+}

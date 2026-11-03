@@ -1,0 +1,42 @@
+<section class="focus-page">
+  <div class="focus-leaf"><app-icon name="leaf" /></div>
+  <div class="focus-timer" [class.running]="focusRunning()">
+    {{ timerLabel }}
+  </div>
+  <p>
+    {{
+      focusRunning()
+        ? "Вы здесь. Вы в моменте."
+        : "Небольшой отрезок времени для важного."
+    }}
+  </p>
+  <select [(ngModel)]="focusTask" aria-label="Задача для фокуса">
+    <option value="">Свободная сессия</option>
+    @for (task of store.tasks(); track task.id) {
+      @if (task.status !== "done") {
+        <option [value]="task.id">{{ task.title }}</option>
+      }
+    }
+  </select>
+  <div class="focus-controls">
+    <button class="primary-button" (click)="toggleFocus()">
+      <app-icon [name]="focusRunning() ? 'pause' : 'play'" />{{
+        focusRunning() ? "Пауза" : "Начать фокус"
+      }}</button
+    ><button class="outline-button" (click)="resetFocus()">Сбросить</button>
+  </div>
+  <div class="focus-durations">
+    @for (min of [15, 25, 45, 60]; track min) {
+      <button
+        [class.active]="focusMinutes === min"
+        (click)="focusMinutes = min; resetFocus()"
+      >
+        {{ min }} мин
+      </button>
+    }
+  </div>
+  <p class="muted small">
+    Таймер работает, пока открыто приложение.<br />После сессии отметьте задачу
+    выполненной в списке.
+  </p>
+</section>

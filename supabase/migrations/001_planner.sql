@@ -1,0 +1,211 @@
+-- Run once in the Supabase SQL editor, or use `supabase db push`.
+-- Public schema: browser API. Private schema: RLS helpers, not exposed as RPC.
+begin;
+create schema if not exists private;
+revoke all on schema private from public;
+grant usage on schema private to authenticated;
+
+create table public.lists (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade default auth.uid(),
+  name text not null check (length(trim(name)) between 1 and 80),
+  color text not null default '#b9efc9' check (color ~ '^#[0-9A-Fa-f]{6}$'),
+  is_shared boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create table public.list_members (
+  list_id uuid not null references public.lists(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  primary key(list_id,user_id)
+);
+create index list_members_user on public.list_members(user_id);
+create index lists_owner on public.lists(owner_id);
+
+create function private.can_access_list(target uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists(select 1 from public.lists l where l.id=target and
+    (l.owner_id=(select auth.uid()) or exists(select 1 from public.list_members m where m.list_id=l.id and m.user_id=(select auth.uid()))));
+$$;
+create function private.owns_list(target uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists(select 1 from public.lists where id=target and owner_id=(select auth.uid()));
+$$;
+revoke all on function private.can_access_list(uuid), private.owns_list(uuid) from public, anon;
+grant execute on function private.can_access_list(uuid), private.owns_list(uuid) to authenticated;
+
+create table public.tasks (
+  id uuid primary key default gen_random_uuid(),
+  list_id uuid not null references public.lists(id) on delete cascade,
+  created_by uuid not null references auth.users(id) default auth.uid(),
+  title text not null check(length(trim(title)) between 1 and 500),
+  notes text not null default '' check(length(notes)<=20000),
+  due_date date,
+  start_time time,
+  duration integer not null default 30 check(duration between 5 and 1440),
+  priority integer not null default 0 check(priority between 0 and 5),
+  status text not null default 'todo' check(status in ('todo','doing','done')),
+  recurrence text not null default 'none' check(recurrence in ('none','daily','weekdays','weekly','monthly')),
+  repeat_anchor integer check(repeat_anchor between 1 and 31),
+  tags text[] not null default '{}',
+  subtasks jsonb not null default '[]'::jsonb check(jsonb_typeof(subtasks)='array'),
+  created_at timestamptz not null default now(),
+  completed_at timestamptz,
+  source_task_id uuid unique references public.tasks(id) on delete set null,
+  sort_order double precision not null default (extract(epoch from now())*1000),
+  progress_mode text not null default 'none' check(progress_mode in ('none','manual','target')),
+  progress_value numeric not null default 0 check(progress_value between 0 and 1000000000000),
+  progress_target numeric not null default 100 check(progress_target>0 and progress_target<=1000000000000),
+  progress_unit text not null default '' check(length(progress_unit)<=30),
+  check(progress_mode<>'manual' or progress_value<=100),
+  check ((status='done')=(completed_at is not null)),
+  check (recurrence='none' or due_date is not null),
+  check (start_time is null or due_date is not null)
+);
+create index tasks_list_date on public.tasks(list_id,due_date);
+create index tasks_completed on public.tasks(completed_at) where completed_at is not null;
+create table public.preferences (
+  user_id uuid primary key references auth.users(id) on delete cascade default auth.uid(),
+  settings jsonb not null default '{}'::jsonb check(jsonb_typeof(settings)='object')
+);
+
+alter table public.lists enable row level security;
+alter table public.list_members enable row level security;
+alter table public.tasks enable row level security;
+alter table public.preferences enable row level security;
+
+create policy lists_read on public.lists for select to authenticated using(private.can_access_list(id));
+create policy lists_create on public.lists for insert to authenticated with check(owner_id=(select auth.uid()) and not is_shared);
+create policy lists_update on public.lists for update to authenticated using(owner_id=(select auth.uid())) with check(owner_id=(select auth.uid()));
+create policy lists_delete on public.lists for delete to authenticated using(owner_id=(select auth.uid()));
+create policy members_read on public.list_members for select to authenticated using(private.can_access_list(list_id));
+-- Membership writes are only available through the checked RPCs below.
+create policy tasks_read on public.tasks for select to authenticated using(private.can_access_list(list_id));
+create policy tasks_create on public.tasks for insert to authenticated with check(created_by=(select auth.uid()) and private.can_access_list(list_id));
+create policy tasks_update on public.tasks for update to authenticated using(private.can_access_list(list_id)) with check(private.can_access_list(list_id));
+create policy tasks_delete on public.tasks for delete to authenticated using(private.can_access_list(list_id));
+create policy preferences_owner on public.preferences for all to authenticated using(user_id=(select auth.uid())) with check(user_id=(select auth.uid()));
+
+revoke all on public.lists,public.list_members,public.tasks,public.preferences from anon,authenticated;
+grant select,insert,delete on public.lists to authenticated;
+grant update(name,color) on public.lists to authenticated;
+grant select on public.list_members to authenticated;
+grant select,insert,update,delete on public.tasks,public.preferences to authenticated;
+
+-- Protect identity fields even when a shared-list participant updates a task.
+create function private.protect_task_identity() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if new.id<>old.id or new.created_by<>old.created_by or new.created_at<>old.created_at or new.source_task_id is distinct from old.source_task_id then
+    -- A cascading deletion may clear a source_task_id. It cannot change identity.
+    if not (new.id=old.id and new.created_by=old.created_by and new.created_at=old.created_at and new.source_task_id is null) then
+      raise exception 'Task identity cannot be changed';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+create trigger protect_task_identity before update on public.tasks for each row execute function private.protect_task_identity();
+
+-- Deterministic local-date recurrence, with an anchor to preserve Jan 31 -> Feb 28 -> Mar 31.
+create function private.next_task_date(current_date_value date,rule text,anchor integer) returns date
+language plpgsql immutable set search_path = '' as $$
+declare result date; first_next date; max_day integer;
+begin
+  if rule='monthly' then
+    first_next:=(date_trunc('month',current_date_value::timestamp)+interval '1 month')::date;
+    max_day:=extract(day from (first_next+interval '1 month - 1 day'))::integer;
+    return first_next+(least(coalesce(anchor,extract(day from current_date_value)::integer),max_day)-1);
+  end if;
+  result:=current_date_value+case when rule='weekly' then 7 else 1 end;
+  if rule='weekdays' then
+    while extract(isodow from result) in (6,7) loop result:=result+1; end loop;
+  end if;
+  return result;
+end;
+$$;
+revoke all on function private.next_task_date(date,text,integer), private.protect_task_identity() from public,anon;
+grant execute on function private.next_task_date(date,text,integer) to authenticated;
+
+-- Invoker permissions preserve RLS. Row lock + unique source prevents duplicate occurrences.
+create function public.set_task_status(task_id uuid,new_status text) returns void
+language plpgsql security invoker set search_path = '' as $$
+declare task public.tasks;
+begin
+  if new_status not in ('todo','doing','done') then raise exception 'Invalid status'; end if;
+  select * into task from public.tasks where id=task_id for update;
+  if not found then raise exception 'Task not found or access denied'; end if;
+  if task.status=new_status then return; end if;
+  update public.tasks set status=new_status,completed_at=case when new_status='done' then now() else null end where id=task_id;
+  if new_status='done' and task.recurrence<>'none' then
+    insert into public.tasks(list_id,created_by,title,notes,due_date,start_time,duration,priority,recurrence,repeat_anchor,tags,subtasks,source_task_id,progress_mode,progress_target,progress_unit)
+    values(task.list_id,auth.uid(),task.title,task.notes,
+      private.next_task_date(task.due_date,task.recurrence,task.repeat_anchor),task.start_time,task.duration,task.priority,
+      task.recurrence,task.repeat_anchor,task.tags,
+      coalesce((select jsonb_agg(jsonb_set(value,'{done}','false'::jsonb)) from jsonb_array_elements(task.subtasks)),'[]'::jsonb),task.id,task.progress_mode,task.progress_target,task.progress_unit)
+    on conflict(source_task_id) do nothing;
+  end if;
+end;
+$$;
+
+create function public.share_list(target_list uuid,member_email text) returns void
+language plpgsql security definer set search_path = '' as $$
+declare target_user uuid;
+begin
+  if not private.owns_list(target_list) then raise exception 'Only the owner can share this list'; end if;
+  select id into target_user from auth.users where lower(email)=lower(trim(member_email));
+  if target_user is null then raise exception 'Участник должен сначала зарегистрироваться в приложении'; end if;
+  if target_user=auth.uid() then raise exception 'Это ваш собственный аккаунт'; end if;
+  insert into public.list_members(list_id,user_id) values(target_list,target_user) on conflict do nothing;
+  update public.lists set is_shared=true where id=target_list;
+end;
+$$;
+create function public.unshare_list(target_list uuid,member_id uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not private.owns_list(target_list) then raise exception 'Only the owner can change access'; end if;
+  delete from public.list_members where list_id=target_list and user_id=member_id;
+  update public.lists set is_shared=exists(select 1 from public.list_members where list_id=target_list) where id=target_list;
+end;
+$$;
+create function public.list_members_info(target_list uuid) returns table(user_id uuid,email text)
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not private.owns_list(target_list) then raise exception 'Only the owner can view member accounts'; end if;
+  return query select u.id,u.email::text from public.list_members m join auth.users u on u.id=m.user_id where m.list_id=target_list;
+end;
+$$;
+revoke all on function public.set_task_status(uuid,text),public.share_list(uuid,text),public.unshare_list(uuid,uuid),public.list_members_info(uuid) from public,anon;
+grant execute on function public.set_task_status(uuid,text),public.share_list(uuid,text),public.unshare_list(uuid,uuid),public.list_members_info(uuid) to authenticated;
+
+create function public.reorder_tasks(task_ids uuid[]) returns void
+language plpgsql security invoker set search_path = '' as $$
+declare task_id uuid; position integer:=0;
+begin
+  if coalesce(array_length(task_ids,1),0)>10000 then raise exception 'Too many tasks'; end if;
+  foreach task_id in array task_ids loop
+    update public.tasks set sort_order=position*1024 where id=task_id;
+    if not found then raise exception 'Task not found or access denied'; end if;
+    position:=position+1;
+  end loop;
+end;
+$$;
+revoke all on function public.reorder_tasks(uuid[]) from public,anon;
+grant execute on function public.reorder_tasks(uuid[]) to authenticated;
+
+create function private.on_new_user() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.lists(owner_id,name,color) values(new.id,'Входящие','#b9efc9');
+  return new;
+end;
+$$;
+revoke all on function private.on_new_user() from public,anon,authenticated;
+create trigger flow_new_user after insert on auth.users for each row execute function private.on_new_user();
+
+-- Run on both Supabase and the isolated PostgreSQL test database.
+do $$ begin
+  if exists(select 1 from pg_publication where pubname='supabase_realtime') then
+    alter publication supabase_realtime add table public.tasks,public.lists;
+  end if;
+end $$;
+commit;

@@ -1,0 +1,39 @@
+<section class="summary-row" aria-label="План на сегодня">
+  <div class="summary-card">
+    <span class="summary-icon mint"><app-icon name="checkcircle" /></span>
+    <div>
+      <span class="stat-label">Выполнено сегодня</span
+      ><strong
+        >{{ todayStats.completed.length }}
+        <small
+          >/
+          {{ todayStats.completed.length + todayStats.pending.length }}
+          задач</small
+        ></strong
+      >
+    </div>
+    <div class="micro-progress"><i [style.width.%]="todayStats.rate"></i></div>
+  </div>
+  <div class="summary-card">
+    <span class="summary-icon lavender"><app-icon name="clock" /></span>
+    <div>
+      <span class="stat-label">Запланировано</span
+      ><strong>{{ duration(plannedMinutes) }}</strong>
+    </div>
+  </div>
+  <div class="summary-card">
+    <span class="summary-icon peach"><app-icon name="bolt" /></span>
+    <div>
+      <span class="stat-label">Серия выполнения</span
+      ><strong>{{ streak }} <small>дн. подряд</small></strong>
+    </div>
+    <span class="tiny-bars">
+      @for (day of heatmap.slice(-7); track day.date) {
+        <i
+          [class.filled]="day.count > 0"
+          [style.height.px]="8 + day.count * 3"
+        ></i>
+      }
+    </span>
+  </div>
+</section>

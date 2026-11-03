@@ -1,0 +1,111 @@
+<div class="statistics-controls">
+  <select aria-label="Период статистики" [(ngModel)]="statsPeriod">
+    <option [ngValue]="7">Последние 7 дней</option>
+    <option [ngValue]="30">Последние 30 дней</option>
+    <option [ngValue]="90">Последние 90 дней</option>
+  </select>
+</div>
+<div class="stats-kpis">
+  <article>
+    <span class="stat-label">Выполнено задач</span
+    ><strong>{{ stats.completed.length }}<app-icon name="checkcircle" /></strong
+    ><span class="muted small">за выбранный период</span>
+  </article>
+  <article>
+    <span class="stat-label">Completion rate</span
+    ><strong>{{ stats.rate }}<small>%</small><app-icon name="chart" /></strong
+    ><span class="muted small">выполнено от всех планов</span>
+  </article>
+  <article>
+    <span class="stat-label">Объём выполненного</span
+    ><strong class="time-stat"
+      >{{ duration(stats.minutes) }}<app-icon name="clock" /></strong
+    ><span class="muted small">по длительности задач</span>
+  </article>
+  <article>
+    <span class="stat-label">Текущая серия</span
+    ><strong>{{ streak }}<small>дн.</small><app-icon name="bolt" /></strong
+    ><span class="muted small">дней с выполненными задачами</span>
+  </article>
+</div>
+<div class="stats-grid">
+  <section class="analytics-card chart-card">
+    <div class="section-title">
+      <h2>Ваш ритм</h2>
+      <span><i class="color-dot"></i>Выполненные задачи</span>
+    </div>
+    <div class="bar-chart">
+      @for (day of chartDays; track day.date) {
+        <div
+          class="bar-column"
+          [title]="dateLabel(day.date) + ': ' + day.count"
+        >
+          <span class="bar-count">{{ day.count || "" }}</span>
+          <div
+            class="chart-bar"
+            [class.today-bar]="day.date === today"
+            [style.height.%]="(day.count / chartMax) * 85"
+          ></div>
+          <span class="bar-label">{{
+            statsPeriod === 7
+              ? dateLabel(day.date, { weekday: "short" })
+              : +day.date.slice(8)
+          }}</span>
+        </div>
+      }
+    </div>
+    <p class="chart-caption">
+      Не каждый день должен быть рекордным. Главное — продолжать.
+    </p>
+  </section>
+  <section class="analytics-card list-breakdown">
+    <h2>По спискам</h2>
+    @for (list of store.lists(); track list.id) {
+      <div class="breakdown-row">
+        <div>
+          <i class="color-dot" [style.background]="list.color"></i>{{ list.name
+          }}<strong>{{ completedForList(list.id) }}</strong>
+        </div>
+        <div class="breakdown-track">
+          <i
+            [style.background]="list.color"
+            [style.width.%]="
+              stats.completed.length
+                ? (completedForList(list.id) / stats.completed.length) * 100
+                : 0
+            "
+          ></i>
+        </div>
+      </div>
+    }
+  </section>
+</div>
+<section class="analytics-card activity-card">
+  <div class="section-title">
+    <h2>Маленькие шаги, каждый день</h2>
+    <span>Последние 12 недель</span>
+  </div>
+  <div class="heatmap">
+    @for (day of heatmap; track day.date) {
+      <div
+        [class]="'heat-cell level-' + Math.min(day.count, 4)"
+        [title]="dateLabel(day.date) + ': ' + day.count + ' выполнено'"
+        [attr.aria-label]="
+          dateLabel(day.date) + ': ' + day.count + ' выполнено'
+        "
+      ></div>
+    }
+  </div>
+  <div class="heatmap-legend">
+    <span>Меньше</span>
+    @for (level of [0, 1, 2, 3, 4]; track level) {
+      <i [class]="'heat-cell level-' + level"></i>
+    }
+    <span>Больше</span>
+  </div>
+</section>
+<p class="stats-explanation">
+  Completion rate = выполненные за период ÷ (выполненные за период +
+  незавершённые со сроком в этом периоде). Время — запланированная длительность
+  выполненных задач.
+</p>

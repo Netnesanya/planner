@@ -1,0 +1,81 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.focus-page {
+  text-align: center;
+  padding: 45px 0 70px;
+}
+.focus-leaf {
+  color: var(--mint);
+  margin: auto;
+  display: grid;
+  place-items: center;
+  width: 55px;
+  height: 55px;
+  background: #b9efc90b;
+  border-radius: 18px;
+}
+.focus-leaf app-icon {
+  width: 25px;
+  height: 25px;
+}
+.focus-timer {
+  font-size: calc(104px * var(--font-scale));
+  font-weight: 450;
+  letter-spacing: -6px;
+  font-variant-numeric: tabular-nums;
+  margin: 25px 0 10px;
+  color: #cfd8d2;
+}
+.focus-timer.running {
+  color: var(--mint);
+}
+.focus-page p {
+  font-size: calc(12px * var(--font-scale));
+  color: #87988d;
+  line-height: 1.9;
+}
+.focus-page select {
+  display: block;
+  margin: 30px auto 23px;
+  max-width: 360px;
+  width: 90%;
+  font-size: calc(11px * var(--font-scale));
+  text-align: center;
+}
+.focus-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.focus-durations {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 28px 0 30px;
+}
+.focus-durations button {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  color: #7e8c85;
+  padding: 7px 15px;
+  font-size: calc(10px * var(--font-scale));
+}
+.focus-durations button.active {
+  background: #b9efc90a;
+  color: var(--mint);
+  border-color: #4c6656;
+}
+.focus-page > .small {
+  font-size: calc(10px * var(--font-scale));
+  color: #64736b;
+}
+@media (max-width: 760px) {
+  .focus-page {
+    padding-top: 28px;
+  }
+  .focus-timer {
+    font-size: calc(88px * var(--font-scale));
+  }
+}

@@ -1,0 +1,307 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.list-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 28px;
+}
+.list-layout.with-agenda {
+  grid-template-columns: minmax(0, 1fr) 265px;
+}
+.task-list-content {
+  min-width: 0;
+}
+.task-group {
+  margin-bottom: 18px;
+}
+.add-task-inline {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: calc(11px * var(--font-scale));
+  color: #8aa893;
+  padding: 15px 3px;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 27px;
+}
+.add-task-inline app-icon {
+  width: 16px;
+}
+.add-task-inline span {
+  margin-left: auto;
+  font-size: calc(9px * var(--font-scale));
+  color: #555e6a;
+}
+.completed-section {
+  padding-top: 9px;
+}
+.completed-section .group-heading {
+  margin-bottom: 3px;
+}
+.completed-section .group-heading h2 {
+  color: #808894;
+}
+.done-line {
+  height: 1px;
+  flex: 1;
+  background: #282d34;
+  margin-left: 5px;
+}
+.list-footnote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #646d79;
+  font-size: calc(9px * var(--font-scale));
+  padding: 40px 0 25px;
+}
+.list-footnote app-icon {
+  width: 12px;
+}
+.day-agenda {
+  border-left: 1px solid var(--line);
+  padding: 8px 0 0 26px;
+  align-self: start;
+  min-height: 540px;
+}
+.agenda-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+}
+.agenda-header h2 {
+  font-size: calc(12px * var(--font-scale));
+}
+.agenda-header app-icon {
+  color: #c5ba9c;
+}
+.agenda-header app-icon {
+  width: 16px;
+}
+.day-agenda > .muted {
+  font-size: calc(9px * var(--font-scale));
+  text-transform: capitalize;
+}
+.day-progress {
+  padding: 27px 0 28px;
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+}
+.progress-ring {
+  width: 123px;
+  height: 123px;
+  margin: auto;
+  border-radius: 50%;
+  padding: 7px;
+  background: conic-gradient(
+    from -90deg,
+    var(--mint) var(--progress),
+    #30362f 0
+  );
+  position: relative;
+}
+.progress-ring > div {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.progress-ring strong {
+  font-size: calc(29px * var(--font-scale));
+  font-weight: 650;
+  letter-spacing: -1px;
+}
+.progress-ring strong small {
+  font-size: calc(16px * var(--font-scale));
+  color: #a6b2aa;
+  font-weight: 450;
+  margin-left: 1px;
+}
+.progress-ring > div > span {
+  font-size: calc(9px * var(--font-scale));
+  color: #8b948f;
+  margin-top: 3px;
+}
+.progress-caption {
+  font-size: calc(10px * var(--font-scale));
+  color: #c6d0c8;
+  margin-top: 18px;
+}
+.progress-caption span {
+  display: block;
+  font-size: calc(9px * var(--font-scale));
+  color: #7c8680;
+  margin-top: 5px;
+}
+.agenda-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #828b98;
+  font-size: calc(8px * var(--font-scale));
+  letter-spacing: 1px;
+  margin: 24px 0 18px;
+}
+.agenda-section-title span {
+  letter-spacing: 0;
+  font-size: calc(9px * var(--font-scale));
+  color: #6c7684;
+}
+.mini-agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.agenda-event {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 0 0 20px;
+  text-align: left;
+  position: relative;
+  width: 100%;
+}
+.agenda-event:not(:last-child):before {
+  content: "";
+  position: absolute;
+  width: 1px;
+  height: 100%;
+  background: #323740;
+  left: 41px;
+  top: 8px;
+}
+.agenda-event > i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 4px;
+  z-index: 1;
+}
+.agenda-time {
+  font-size: calc(9px * var(--font-scale));
+  color: #8d96a3;
+  width: 29px;
+  flex-shrink: 0;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+.agenda-event > span:nth-of-type(2) {
+  flex: 1;
+  min-width: 0;
+  margin-top: -1px;
+}
+.agenda-event strong {
+  display: block;
+  font-size: calc(9px * var(--font-scale));
+  font-weight: 550;
+  line-height: 1.6;
+  color: #c7cdd7;
+}
+.agenda-event small {
+  display: block;
+  font-size: calc(8px * var(--font-scale));
+  color: #6f7987;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+.agenda-event.done strong {
+  color: #77818e;
+  text-decoration: line-through;
+}
+.agenda-event > app-icon {
+  color: #80a28c;
+}
+.agenda-event > app-icon {
+  width: 12px;
+}
+.agenda-calendar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  color: #a3b3a7;
+  border: 1px solid #333b35;
+  border-radius: 6px;
+  padding: 9px 11px;
+  font-size: calc(9px * var(--font-scale));
+  margin-top: 2px;
+}
+.agenda-calendar app-icon {
+  width: 13px;
+}
+.focus-note {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 18px 0 10px;
+  color: #929c94;
+  font-size: calc(9px * var(--font-scale));
+  line-height: 1.8;
+}
+.focus-note app-icon {
+  color: #8b9a8d;
+  margin-top: 2px;
+}
+.focus-note app-icon {
+  width: 14px;
+}
+.focus-note small {
+  font-size: calc(8px * var(--font-scale));
+  color: #6c776f;
+}
+.search-result-label {
+  font-size: calc(11px * var(--font-scale));
+  color: var(--muted);
+  padding: 5px 0 14px;
+}
+@media (min-width: 1600px) {
+  .list-layout.with-agenda {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 40px;
+  }
+  .agenda-event strong {
+    font-size: calc(10px * var(--font-scale));
+  }
+  .agenda-event small {
+    font-size: calc(9px * var(--font-scale));
+  }
+  .day-agenda {
+    padding-left: 35px;
+  }
+}
+@media (max-width: 1200px) {
+  .list-layout.with-agenda {
+    grid-template-columns: minmax(0, 1fr) 225px;
+    gap: 20px;
+  }
+  .day-agenda {
+    padding-left: 20px;
+  }
+}
+@media (max-width: 1000px) {
+  .day-agenda {
+    display: none;
+  }
+  .list-layout.with-agenda {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .list-footnote {
+    font-size: calc(8px * var(--font-scale));
+  }
+}
+app-task-card.drop-target {
+  border-top: 2px solid var(--mint);
+  border-radius: 4px;
+}

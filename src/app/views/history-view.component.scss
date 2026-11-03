@@ -1,0 +1,25 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.history-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 25px;
+}
+.history-list {
+  max-width: 1000px;
+}
+.history-list > .group-heading {
+  margin-top: 24px;
+}
+@media (max-width: 760px) {
+  .history-toolbar .outline-button {
+    font-size: calc(10px * var(--font-scale));
+    padding: 7px 11px;
+  }
+  .history-toolbar .muted {
+    font-size: calc(11px * var(--font-scale));
+  }
+}

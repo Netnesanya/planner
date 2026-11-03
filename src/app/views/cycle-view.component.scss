@@ -1,0 +1,402 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.panel {
+  padding: 24px;
+  border: 1px solid var(--line);
+  background: #20242a;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+h3 {
+  font-size: 15px;
+  margin: 0 0 16px;
+}
+p {
+  line-height: 1.65;
+  color: var(--muted);
+  font-size: 13px;
+}
+.section-heading,
+.week-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 20px;
+  p {
+    margin: 7px 0 0;
+  }
+}
+.toolbar-buttons {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.cycle-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+  }
+  select {
+    max-width: 300px;
+  }
+  span {
+    color: var(--muted);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+}
+.cycle-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 26px 0 22px;
+  p {
+    margin: 9px 0 0;
+    white-space: pre-line;
+    max-width: 800px;
+  }
+}
+.cycle-status {
+  color: var(--mint);
+  font-size: 12px;
+}
+.goal-count {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+  strong {
+    color: var(--text);
+    font-size: 30px;
+    margin-right: 6px;
+  }
+}
+.week-strip {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(68px, 1fr));
+  gap: 6px;
+  margin-bottom: 32px;
+  overflow-x: auto;
+  padding-bottom: 5px;
+  button {
+    padding: 12px 5px 8px;
+    border: 1px solid var(--line);
+    background: #20242a;
+    border-radius: 9px;
+    text-align: center;
+  }
+  span {
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+  strong {
+    display: block;
+    font-size: 23px;
+    font-weight: 500;
+    margin: 4px;
+  }
+  small {
+    color: var(--muted);
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  i {
+    display: block;
+    margin: 10px 3px 0;
+    height: 3px;
+    border-radius: 4px;
+    background: #ffffff0c;
+    overflow: hidden;
+    b {
+      display: block;
+      height: 100%;
+      background: var(--mint);
+    }
+  }
+  .selected {
+    border-color: var(--mint);
+    background: #b9efc90e;
+  }
+  .current span {
+    color: var(--mint);
+  }
+}
+.goal-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+.goal-empty {
+  padding: 22px;
+  border: 1px dashed #4b5550;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.goal-chooser {
+  label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0;
+    font-size: 14px;
+    input {
+      width: 17px;
+      accent-color: var(--mint);
+    }
+    small {
+      color: var(--muted);
+      display: block;
+      margin-top: 3px;
+      font-size: 11px;
+    }
+  }
+}
+.cycle-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  margin: 28px 0 24px;
+  gap: 20px;
+  overflow-x: auto;
+  button {
+    padding: 14px 2px;
+    font-size: 13px;
+    white-space: nowrap;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+  }
+  button[aria-selected="true"] {
+    color: var(--mint);
+    border-color: var(--mint);
+  }
+}
+.week-heading h2 span {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.execution-score {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-shrink: 0;
+  strong {
+    font-size: 32px;
+    color: var(--mint);
+    font-weight: 500;
+  }
+  span {
+    font-size: 12px;
+  }
+  small {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    margin-top: 5px;
+  }
+}
+.week-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.weekly-tasks {
+  display: grid;
+  gap: 14px;
+}
+.weekly-task-context {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 3px 7px;
+}
+.week-empty {
+  text-align: center;
+  padding: 30px 18px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  app-icon {
+    width: 30px;
+    height: 30px;
+    margin: 0 auto 12px;
+    color: var(--mint);
+  }
+  p {
+    max-width: 550px;
+    margin: auto;
+  }
+}
+.days-picker {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  button {
+    width: 42px;
+    height: 38px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    font-size: 13px;
+  }
+  [aria-pressed="true"] {
+    color: #183224;
+    background: var(--mint);
+  }
+}
+.action-range {
+  display: grid;
+  grid-template-columns: 110px 110px 180px;
+  gap: 16px;
+  .field-label {
+    min-width: 0;
+  }
+}
+.cycle-retro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  p {
+    max-width: 600px;
+  }
+  button {
+    flex-shrink: 0;
+  }
+}
+.cycle-welcome {
+  text-align: center;
+  padding: 50px 24px;
+  max-width: 860px;
+  margin: 0 auto;
+  h2 {
+    font-size: 24px;
+    max-width: 500px;
+    margin: 22px auto 14px;
+    line-height: 1.4;
+  }
+  p {
+    max-width: 490px;
+    margin: auto;
+  }
+  a {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 22px;
+  }
+}
+.welcome-number {
+  font-size: 70px;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--mint);
+  span {
+    display: block;
+    font-size: 13px;
+    letter-spacing: 3px;
+    margin-top: 7px;
+    font-weight: 400;
+  }
+}
+.welcome-steps {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin: 30px 0;
+  font-size: 12px;
+  b {
+    color: var(--mint);
+    margin-right: 5px;
+  }
+}
+@media (max-width: 1100px) {
+  .section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .cycle-toolbar > div:first-child {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .week-heading {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 760px) {
+  .panel {
+    padding: 18px;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .cycle-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .cycle-intro {
+    gap: 10px;
+  }
+  .goal-count {
+    display: none;
+  }
+  .goal-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .week-actions,
+  .cycle-retro {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .action-range {
+    grid-template-columns: 1fr 1fr;
+    .field-label:last-child {
+      grid-column: 1 / -1;
+    }
+  }
+  .days-picker {
+    gap: 5px;
+    button {
+      flex: 1;
+      width: auto;
+    }
+  }
+  .welcome-steps {
+    flex-direction: column;
+    gap: 14px;
+  }
+  .cycle-tabs {
+    gap: 16px;
+  }
+  .weekly-task-context {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .cycle-welcome h2 {
+    font-size: 21px;
+  }
+}

@@ -1,0 +1,389 @@
+<div class="overlay drawer-overlay" (click)="closeOverlays()">
+  <section
+    class="task-editor"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="editor-title"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="editor-header">
+      <span id="editor-title">{{
+        store.tasks().some(isEditorTask) ? "Детали задачи" : "Новая задача"
+      }}</span
+      ><button
+        class="icon-button"
+        aria-label="Закрыть редактор"
+        (click)="closeOverlays()"
+      >
+        <app-icon name="close" />
+      </button>
+    </div>
+    <form (ngSubmit)="saveEditor()">
+      <div class="editor-scroll">
+        <input
+          class="task-title-input"
+          name="title"
+          [(ngModel)]="task.title"
+          placeholder="Что планируете сделать?"
+          aria-label="Название задачи"
+          required
+          maxlength="500"
+        />
+        <div class="task-kind-picker" role="radiogroup" aria-label="Тип задачи">
+          <label [class.selected]="!task.is_milestone"
+            ><input
+              type="radio"
+              name="taskKind"
+              [value]="false"
+              [(ngModel)]="task.is_milestone"
+              (ngModelChange)="changeKind()"
+            /><app-icon name="checkcircle" /><span
+              ><strong>Задача</strong><small>Конкретное действие</small></span
+            ></label
+          >
+          <label [class.selected]="task.is_milestone"
+            ><input
+              type="radio"
+              name="taskKind"
+              [value]="true"
+              [(ngModel)]="task.is_milestone"
+              (ngModelChange)="changeKind()"
+            /><app-icon name="flag" /><span
+              ><strong>Майлстоун</strong><small>Цель на горизонте</small></span
+            ></label
+          >
+        </div>
+        @if (task.is_milestone) {
+          <div class="milestone-tag-preview">
+            <span class="goal-tag" [style.--tag-color]="task.milestone_color"
+              ># {{ task.title || "Название майлстоуна" }}</span
+            >
+            <div class="goal-colors">
+              @for (color of colors; track color) {
+                <button
+                  type="button"
+                  [style.background]="color"
+                  [class.selected]="task.milestone_color === color"
+                  [attr.aria-label]="'Цвет тега ' + color"
+                  (click)="task.milestone_color = color"
+                ></button>
+              }
+            </div>
+          </div>
+          <p class="field-help">
+            Этот тег можно назначить задачам из любого списка. Цвет тега станет
+            цветом связанных карточек.
+          </p>
+          <details class="linked-tasks" open>
+            <summary>
+              Связанные задачи <span>{{ linkedTasks.length }}</span>
+            </summary>
+            @for (linked of linkedTasks; track linked.id) {
+              <div class="linked-task">
+                <button
+                  type="button"
+                  class="linked-check"
+                  [class.done]="linked.status === 'done'"
+                  [attr.aria-label]="'Переключить выполнение: ' + linked.title"
+                  [disabled]="store.busy()"
+                  (click)="
+                    store.setStatus(
+                      linked,
+                      linked.status === 'done' ? 'todo' : 'done'
+                    )
+                  "
+                >
+                  @if (linked.status === "done") {
+                    <app-icon name="check" />
+                  }</button
+                ><span
+                  >{{ linked.title
+                  }}<small>{{
+                    linked.due_date ? dateLabel(linked.due_date) : "Без даты"
+                  }}</small></span
+                >
+              </div>
+            } @empty {
+              <p>Назначьте этот тег в карточке задачи — она появится здесь.</p>
+            }
+          </details>
+        }
+        @if (!task.is_milestone) {
+          <label class="editor-field"
+            ><span>Тег майлстоуна</span
+            ><select
+              name="goal"
+              [(ngModel)]="task.goal_id"
+              aria-label="Тег майлстоуна"
+            >
+              <option [ngValue]="null">Без майлстоуна</option>
+              @for (goal of availableGoals; track goal.id) {
+                <option [value]="goal.id">{{ goal.title }}</option>
+              }
+            </select></label
+          >
+        }
+        <label class="field-label"
+          >Описание<textarea
+            name="notes"
+            [(ngModel)]="task.notes"
+            placeholder="Детали, мысли, ссылки…"
+            rows="4"
+            maxlength="20000"
+          ></textarea></label
+        ><label class="editor-field"
+          ><span><app-icon name="folder" />Список</span
+          ><select
+            name="list"
+            [(ngModel)]="task.list_id"
+            (ngModelChange)="changeList()"
+          >
+            @for (list of store.lists(); track list.id) {
+              <option [value]="list.id">{{ list.name }}</option>
+            }
+          </select></label
+        ><label class="editor-field"
+          ><span><app-icon name="calendar" />Дата</span
+          ><input
+            type="date"
+            name="date"
+            [(ngModel)]="task.due_date"
+            aria-label="Дата задачи"
+        /></label>
+        @if (!task.is_milestone) {
+          <label class="editor-field"
+            ><span><app-icon name="clock" />Начало</span
+            ><input
+              type="time"
+              name="time"
+              [(ngModel)]="task.start_time"
+              aria-label="Время начала"
+          /></label>
+          <div class="editor-field">
+            <button
+              type="button"
+              class="duration-field-label"
+              (click)="durationPicker.focus()"
+            >
+              <app-icon name="clock" />Длительность
+            </button>
+            <app-duration-picker
+              #durationPicker
+              [value]="task.duration"
+              (valueChange)="task.duration = $event"
+              (validChange)="durationValid = $event"
+            />
+          </div>
+        }
+        <label class="editor-field"
+          ><span><app-icon name="flag" />Приоритет</span
+          ><app-priority-stars [(value)]="task.priority" /></label
+        ><label class="editor-field"
+          ><span><app-icon name="repeat" />Повторение</span
+          ><select
+            name="recurrence"
+            [(ngModel)]="task.recurrence"
+            [disabled]="!!task.is_milestone"
+          >
+            @for (repeat of repeatOptions; track repeat[0]) {
+              <option [value]="repeat[0]">{{ repeat[1] }}</option>
+            }
+          </select></label
+        >
+        @if (task.recurrence !== "none") {
+          <p class="field-help">
+            Повторения появятся в календаре на 12 недель вперёд, даже без
+            времени начала. Изменение правила повторения перестраивает будущие
+            неизменённые экземпляры; выполненные и отдельно отредактированные
+            сохраняются.
+          </p>
+        }
+        <section class="progress-settings">
+          <label class="editor-field"
+            ><span><app-icon name="chart" />Прогресс</span
+            ><select
+              name="progressMode"
+              [(ngModel)]="task.progress_mode"
+              (ngModelChange)="changeProgressMode()"
+              aria-label="Способ отслеживания прогресса"
+            >
+              <option value="none">Не отслеживать</option>
+              <option value="manual">Ручной ползунок</option>
+              <option value="target">Значение и цель</option>
+            </select></label
+          >
+          @if (task.progress_mode === "target") {
+            <div class="goal-fields">
+              <label class="field-label"
+                >Сделано<input
+                  type="number"
+                  name="progressValue"
+                  [(ngModel)]="task.progress_value"
+                  min="0"
+                  max="1000000000000"
+                  step="any"
+                  required
+                  aria-label="Сделано по цели"
+              /></label>
+              <label class="field-label"
+                >Цель<input
+                  type="number"
+                  name="progressTarget"
+                  [(ngModel)]="task.progress_target"
+                  min="0.01"
+                  max="1000000000000"
+                  step="any"
+                  required
+                  aria-label="Целевое значение"
+              /></label>
+              <label class="field-label"
+                >Единица<input
+                  type="text"
+                  name="progressUnit"
+                  [(ngModel)]="task.progress_unit"
+                  placeholder="$ / км / стр."
+                  maxlength="30"
+                  aria-label="Единица прогресса"
+              /></label>
+            </div>
+            <p class="field-help">
+              Например, 3 500 из 5 000 $. В карточке можно менять фактическое
+              значение нажатием на число.
+            </p>
+          }
+          @if (task.progress_mode === "manual") {
+            <label class="manual-progress"
+              ><input
+                type="range"
+                name="manualProgress"
+                [(ngModel)]="task.progress_value"
+                min="0"
+                max="100"
+                step="1"
+                aria-label="Ручной прогресс задачи"
+              /><output>{{ task.progress_value }}%</output></label
+            >
+            <p class="field-help">
+              В карточке останется только полоска. Проценты видны здесь для
+              точной настройки.
+            </p>
+          }
+          @if (task.progress_mode !== "none") {
+            <p class="field-help">
+              Прогресс и завершение независимы: галочка закрывает задачу,
+              сохраняя достигнутый результат.
+            </p>
+          }
+        </section>
+        <label class="editor-field"
+          ><span><app-icon name="kanban" />Статус</span
+          ><select
+            name="status"
+            [(ngModel)]="task.status"
+            [disabled]="task.status === 'done'"
+          >
+            <option value="todo">Запланировано</option>
+            <option value="doing">В процессе</option>
+            @if (task.status === "done") {
+              <option value="done">Выполнено</option>
+            }
+          </select></label
+        ><label class="field-label tags-label"
+          ><span><app-icon name="tag" />Теги</span
+          ><input
+            name="tags"
+            [(ngModel)]="tagInput"
+            placeholder="фокус, работа, идеи"
+            maxlength="1000"
+          /><small>Разделяйте теги запятыми</small></label
+        >
+        <div class="subtask-section">
+          <h3>
+            Подзадачи <span>{{ task.subtasks.length }}</span>
+          </h3>
+          @for (sub of task.subtasks; track sub.id) {
+            <div class="subtask-row">
+              <input
+                type="checkbox"
+                [name]="'sub-' + sub.id"
+                [(ngModel)]="sub.done"
+                [attr.aria-label]="'Выполнено: ' + sub.title"
+              /><span [class.strikethrough]="sub.done">{{ sub.title }}</span
+              ><button
+                type="button"
+                class="icon-button"
+                aria-label="Удалить подзадачу"
+                (click)="removeSubtask(sub.id)"
+              >
+                <app-icon name="close" />
+              </button>
+            </div>
+          }
+          <div class="subtask-add">
+            <input
+              name="newSubtask"
+              [(ngModel)]="subtaskInput"
+              placeholder="Добавить подзадачу"
+              (keydown.enter)="$event.preventDefault(); addSubtask()"
+            /><button
+              type="button"
+              class="icon-button"
+              aria-label="Добавить подзадачу"
+              (click)="addSubtask()"
+            >
+              <app-icon name="plus" />
+            </button>
+          </div>
+        </div>
+        @if (task.completed_at) {
+          <p class="field-help">
+            Выполнено {{ completedDate(task.completed_at) }}
+          </p>
+        }
+      </div>
+      <div class="editor-footer">
+        @if (store.tasks().some(isEditorTask)) {
+          <button
+            type="button"
+            class="icon-button danger"
+            aria-label="Удалить задачу"
+            (click)="confirmDelete = true"
+          >
+            <app-icon name="trash" />
+          </button>
+        }
+        <button type="button" class="outline-button" (click)="closeOverlays()">
+          Отмена</button
+        ><button class="primary-button" type="submit" [disabled]="store.busy()">
+          {{ store.busy() ? "Сохраняем…" : "Сохранить" }}
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
+@if (confirmDelete) {
+  <div class="overlay confirmation-overlay">
+    <section
+      class="modal confirm-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Удалить задачу"
+    >
+      <div class="modal-body">
+        <h2>Удалить задачу?</h2>
+        <p>Задача будет удалена из всех представлений и статистики.</p>
+        <div class="confirm-actions">
+          <button class="outline-button" (click)="confirmDelete = false">
+            Отмена</button
+          ><button
+            class="primary-button"
+            (click)="removeTask()"
+            [disabled]="store.busy()"
+          >
+            Удалить
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+}
