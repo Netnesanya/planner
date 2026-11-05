@@ -1,0 +1,181 @@
+<div class="tag-field">
+  <span class="tag-caption"
+    >{{ label }}
+    @if (!manage) {
+      <small>необязательно</small>
+    }
+  </span>
+  @if (manage) {
+    <p class="tag-help">
+      {{
+        kind === "expense"
+          ? "0 ★ — вредное · 5 ★ — необходимо. Левые 30% звезды выбирают предыдущее значение. Оценка относится к тегу, а не меняет сумму операции."
+          : "Свои теги для источников дохода. Они не смешиваются с расходами."
+      }}
+    </p>
+  }
+  @if (!manage) {
+    <button
+      type="button"
+      class="tag-trigger"
+      [disabled]="disabled"
+      [attr.aria-expanded]="open"
+      [attr.aria-controls]="panelId"
+      (click)="show()"
+      (keydown.arrowdown)="!open && show(); $event.preventDefault()"
+    >
+      {{ selected.length ? selected.join(" · ") : "Выбрать или создать теги"
+      }}<span aria-hidden="true">⌄</span>
+    </button>
+    @if (selected.length) {
+      <div class="selected-tags">
+        @for (name of selected; track name) {
+          <button
+            type="button"
+            [disabled]="disabled"
+            (click)="toggle(name)"
+            [attr.aria-label]="'Убрать тег ' + name"
+          >
+            #{{ name }} <span aria-hidden="true">×</span>
+          </button>
+        }
+      </div>
+    }
+  } @else {
+    <button
+      type="button"
+      class="tag-trigger"
+      [disabled]="disabled"
+      (click)="show()"
+      [attr.aria-expanded]="open"
+      [attr.aria-controls]="panelId"
+    >
+      Создать тег<span aria-hidden="true">＋</span>
+    </button>
+  }
+  @if (open) {
+    <div
+      #menu
+      class="tag-popover"
+      [attr.popover]="supportsPopover ? 'auto' : null"
+      (toggle)="onToggle($event)"
+      [id]="panelId"
+      role="region"
+      [attr.aria-label]="label + ' — выбор'"
+    >
+      <div class="search-row">
+        <input
+          #searchInput
+          type="search"
+          [attr.aria-label]="'Поиск или создание: ' + label"
+          placeholder="Найти или создать тег"
+          [(ngModel)]="query"
+          [ngModelOptions]="{ standalone: true }"
+          maxlength="80"
+          autocomplete="off"
+          (keydown.enter)="$event.preventDefault(); canCreate && create()"
+        /><button
+          type="button"
+          class="close-tags"
+          aria-label="Закрыть список тегов"
+          (click)="close()"
+        >
+          ×
+        </button>
+      </div>
+      <p class="sort-caption">
+        По частоте использования ·
+        {{ kind === "expense" ? "только расходы" : "только доходы" }}
+      </p>
+      <div class="tag-options">
+        @for (tag of items; track tag.name) {
+          <div class="tag-option">
+            <button
+              type="button"
+              class="tag-choice"
+              [disabled]="disabled || manage"
+              [attr.aria-pressed]="has(tag.name)"
+              (click)="toggle(tag.name)"
+            >
+              <span
+                ><b>#{{ tag.name }}</b>
+                @if (kind === "income") {
+                  <small>{{ usage(tag.count) }}</small>
+                }
+              </span>
+              @if (!manage) {
+                <span class="selection-mark" aria-hidden="true">{{
+                  has(tag.name) ? "✓" : "+"
+                }}</span>
+              }
+            </button>
+            @if (kind === "expense") {
+              <app-expense-importance
+                [value]="tag.importance"
+                [disabled]="disabled"
+                [label]="'тег ' + tag.name"
+                [countText]="usage(tag.count)"
+                (valueChange)="rate(tag, $event)"
+              />
+            }
+          </div>
+        } @empty {
+          <p class="empty-tags">
+            {{
+              query
+                ? "Совпадений нет. Можно создать свой тег."
+                : "Пока нет тегов. Введите название, чтобы создать первый."
+            }}
+          </p>
+        }
+      </div>
+      @if (canCreate) {
+        <div class="create-tag">
+          @if (kind === "expense") {
+            <span>Важность нового тега</span>
+            <app-expense-importance
+              [value]="importance"
+              [disabled]="disabled"
+              (valueChange)="importance = $event"
+            />
+          }
+          <button
+            type="button"
+            class="create-button"
+            [disabled]="disabled"
+            (click)="create()"
+          >
+            Создать «{{ query.trim() }}»
+          </button>
+        </div>
+      }
+    </div>
+  }
+  @if (manage && !open) {
+    <div class="managed-tags">
+      @for (tag of items; track tag.name) {
+        <div class="tag-option">
+          <span class="managed-name"
+            ><b>#{{ tag.name }}</b>
+            @if (kind === "income") {
+              <small>{{ usage(tag.count) }}</small>
+            }
+          </span>
+          @if (kind === "expense") {
+            <app-expense-importance
+              [value]="tag.importance"
+              [disabled]="disabled"
+              [label]="'тег ' + tag.name"
+              [countText]="usage(tag.count)"
+              (valueChange)="rate(tag, $event)"
+            />
+          }
+        </div>
+      } @empty {
+        <p class="empty-tags">
+          Создавайте теги заранее или при записи операции.
+        </p>
+      }
+    </div>
+  }
+</div>

@@ -192,14 +192,17 @@
         }}</strong>
       </div>
       <div class="topbar-actions">
-        <label class="search-box"
-          ><app-icon name="search" /><input
-            id="global-search"
-            [(ngModel)]="search"
-            placeholder="Поиск задач"
-            aria-label="Поиск задач"
-          /><kbd>⌘ K</kbd></label
-        ><button
+        @if (area !== "finance") {
+          <label class="search-box"
+            ><app-icon name="search" /><input
+              id="global-search"
+              [(ngModel)]="search"
+              placeholder="Поиск задач"
+              aria-label="Поиск задач"
+            /><kbd>⌘ K</kbd></label
+          >
+        }
+        <button
           class="icon-button sync-button"
           (click)="store.cloud() ? store.refresh() : openSettings('account')"
           [attr.aria-label]="
@@ -218,8 +221,12 @@
     </header>
     <nav class="workspace-modes" aria-label="Режим планирования">
       <button
-        [class.active]="area !== 'cycles'"
-        [attr.aria-pressed]="area !== 'cycles'"
+        [class.active]="
+          area !== 'cycles' && area !== 'finance'
+        "
+        [attr.aria-pressed]="
+          area !== 'cycles' && area !== 'finance'
+        "
         (click)="setMode('planner')"
       >
         <app-icon name="calendar" />Планнер</button
@@ -229,6 +236,13 @@
         (click)="setMode('cycles')"
       >
         <app-icon name="flag" />12 недель
+      </button>
+      <button
+        [class.active]="area === 'finance'"
+        [attr.aria-pressed]="area === 'finance'"
+        (click)="setMode('finance')"
+      >
+        <app-icon name="chart" />Финансы
       </button>
     </nav>
     @if (!store.online()) {
@@ -261,19 +275,21 @@
         <h1>{{ headerTitle }}<span class="heading-dot">.</span></h1>
         <p>
           {{
-            area === "cycles"
-              ? "От важных результатов — к действиям каждой недели."
-              : area === "stats"
-                ? "Маленькие шаги складываются в большие результаты."
-                : area === "history"
-                  ? "Место, где видно, сколько всего вы уже сделали."
-                  : area === "focus"
-                    ? "Уберите лишнее. Дайте важному немного времени."
-                    : scope === "today"
-                      ? "Немного ясности. Больше пространства для важного."
-                      : scope === "all"
-                        ? "Все ваши планы — в одном пространстве."
-                        : "У каждого плана есть своё место."
+            area === "finance"
+                ? "Деньги, планы и немного спокойствия."
+                : area === "cycles"
+                  ? "От важных результатов — к действиям каждой недели."
+                  : area === "stats"
+                    ? "Маленькие шаги складываются в большие результаты."
+                    : area === "history"
+                      ? "Место, где видно, сколько всего вы уже сделали."
+                      : area === "focus"
+                        ? "Уберите лишнее. Дайте важному немного времени."
+                        : scope === "today"
+                          ? "Немного ясности. Больше пространства для важного."
+                          : scope === "all"
+                            ? "Все ваши планы — в одном пространстве."
+                            : "У каждого плана есть своё место."
           }}
         </p>
       </div>
@@ -387,6 +403,8 @@
           />
         }
       }
+    } @else if (area === "finance") {
+      <app-finance-view />
     } @else if (area === "cycles") {
       <app-cycle-view (open)="handleOpen($event)" />
     } @else if (area === "stats") {
@@ -597,7 +615,8 @@
               <h3>Данные и резервные копии</h3>
               <p>
                 Сохраняйте копию планов в JSON, чтобы не потерять их при очистке
-                браузера.
+                браузера. Финансовая копия сохраняется отдельно в разделе
+                «Финансы → Настройки».
               </p>
               <div class="settings-buttons">
                 <button class="outline-button" (click)="store.exportData()">
@@ -738,7 +757,10 @@
   </div>
 }
 @if (confirm) {
-  <div class="overlay confirmation-overlay">
+  <div
+    class="overlay confirmation-overlay"
+    (click)="confirm = $event.target === $event.currentTarget ? null : confirm"
+  >
     <section
       class="modal confirm-modal"
       role="dialog"

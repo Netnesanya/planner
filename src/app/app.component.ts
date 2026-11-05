@@ -23,6 +23,7 @@ import { FocusViewComponent } from "./views/focus-view.component";
 import { TodaySummaryComponent } from "./views/today-summary.component";
 import { CycleViewComponent } from "./views/cycle-view.component";
 import { TaskEditorComponent } from "./editor/task-editor.component";
+import { FinanceViewComponent } from "./finance/finance-view.component";
 type View = "list" | "kanban" | "calendar" | "timeline";
 @Component({
   selector: "app-root",
@@ -40,6 +41,7 @@ type View = "list" | "kanban" | "calendar" | "timeline";
     TodaySummaryComponent,
     TaskEditorComponent,
     CycleViewComponent,
+    FinanceViewComponent,
   ],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.scss",
@@ -52,8 +54,13 @@ export class AppComponent {
   )
     ? this.store.preferences().view
     : "list") as View;
-  area: "tasks" | "stats" | "history" | "focus" | "cycles" =
-    this.store.preferences().mode === "cycles" ? "cycles" : "tasks";
+  area:
+    "tasks" | "stats" | "history" | "focus" | "cycles" | "finance" =
+    this.store.preferences().mode === "finance"
+      ? "finance"
+      : this.store.preferences().mode === "cycles"
+          ? "cycles"
+          : "tasks";
   pendingCycleId: string | null = null;
   scope = "today";
   search = "";
@@ -93,6 +100,7 @@ export class AppComponent {
     return parseDate(date).toLocaleDateString("ru-RU", opts);
   }
   get headerTitle() {
+    if (this.area === "finance") return "Финансы";
     if (this.area === "cycles") return "12 недель";
     if (this.area === "stats") return "Ваш прогресс";
     if (this.area === "history") return "Выполненные задачи";
@@ -193,8 +201,8 @@ export class AppComponent {
                 (a.start_time || "99").localeCompare(b.start_time || "99"),
       );
   }
-  setMode(mode: "planner" | "cycles") {
-    this.area = mode === "cycles" ? "cycles" : "tasks";
+  setMode(mode: "planner" | "cycles" | "finance") {
+    this.area = mode === "planner" ? "tasks" : mode;
     this.search = "";
     this.mobileNav = false;
     void this.store.savePreferences({ mode });

@@ -1,0 +1,987 @@
+<div class="finance-topline">
+  <span class="privacy"
+    ><app-icon name="lock" />Личные финансы ·
+    {{ store.planner.cloud() ? "приватное облако" : "в этом браузере" }}</span
+  ><button class="text-button" (click)="store.load()" [disabled]="store.busy()">
+    Обновить
+  </button>
+</div>
+@if (store.error()) {
+  <div class="finance-error" role="alert">{{ store.error() }}</div>
+}
+@if (store.loading()) {
+  <p class="loading">Загружаем финансовое пространство…</p>
+}
+@if (notice) {
+  <div class="finance-notice" role="status">
+    <span>{{ notice }}</span>
+    @if (undo) {
+      <button class="text-button" (click)="undoLast()" [disabled]="disabled">
+        Отменить запись
+      </button>
+    }
+    <button
+      class="icon-button"
+      aria-label="Закрыть сообщение финансов"
+      (click)="notice = ''; undo = null"
+    >
+      <app-icon name="close" />
+    </button>
+  </div>
+}
+@if (store.ready()) {
+  @if (!accounts.length) {
+    <section class="welcome finance-panel">
+      <div class="welcome-symbol"><app-icon name="chart" /></div>
+      <span class="eyebrow">МЕНЬШЕ УСИЛИЙ. БОЛЬШЕ ЯСНОСТИ.</span>
+      <h2>Деньги под рукой</h2>
+      <p>
+        Записывайте покупки в пару касаний. Планируйте аренду и подписки один
+        раз — подтверждайте по мере оплаты.
+      </p>
+      <button class="primary-button" (click)="tab = 'settings'">
+        Добавить первый счёт</button
+      ><small
+        >Начните с карты или наличных. Банковское подключение не
+        требуется.</small
+      >
+    </section>
+  } @else {
+    <div class="quick-actions">
+      <button
+        class="primary-button"
+        (click)="openEntry('expense')"
+        [disabled]="disabled"
+      >
+        <app-icon name="minus" />Расход</button
+      ><button
+        class="outline-button"
+        (click)="openEntry('income')"
+        [disabled]="disabled"
+      >
+        <app-icon name="plus" />Доход</button
+      ><button
+        class="outline-button"
+        (click)="openEntry('transfer')"
+        [disabled]="disabled || accounts.length < 2"
+      >
+        <app-icon name="repeat" />Перевод
+      </button>
+    </div>
+  }
+  <nav class="finance-tabs" aria-label="Разделы финансов">
+    @for (
+      item of [
+        { id: "overview", label: "Обзор" },
+        { id: "transactions", label: "Операции" },
+        { id: "plan", label: "Платежи" },
+        { id: "savings", label: "Накопления" },
+        { id: "settings", label: "Настройки" },
+      ];
+      track item.id
+    ) {
+      <button
+        [class.active]="tab === item.id"
+        [attr.aria-pressed]="tab === item.id"
+        (click)="$any(this).tab = item.id"
+      >
+        {{ item.label }}
+      </button>
+    }
+  </nav>
+  @if (tab === "savings") {
+    <app-savings-view />
+  }
+  @if (tab === "overview") {
+    <div class="account-grid">
+      @for (account of accounts; track account.id) {
+        <article class="finance-panel account-card">
+          <span>{{ account.name }}</span
+          ><strong>{{
+            format(balance(data, account.id), account.currency)
+          }}</strong
+          ><small>Остаток по записям</small>
+          @if (reserved(data, account.id)) {
+            <small
+              >В накоплениях:
+              {{ format(reserved(data, account.id), account.currency) }}</small
+            ><small
+              >Свободно:
+              {{ format(available(data, account.id), account.currency) }}</small
+            >
+          }
+
+          <div class="forecast">
+            <span>Платежи на 30 дней</span
+            ><b>{{ format(forecast(account).known, account.currency) }}</b>
+            @if (forecast(account).unknown) {
+              <small
+                >+ {{ forecast(account).unknown }} с неизвестной суммой</small
+              >
+            }
+            <small
+              >После известных платежей:
+              {{
+                format(
+                  balance(data, account.id) - forecast(account).known,
+                  account.currency
+                )
+              }}</small
+            >
+          </div>
+        </article>
+      }
+    </div>
+    @if (accounts.length) {
+      <p class="helper">
+        Прогноз включает ожидающие и неподтверждённые прошлые платежи. Это
+        оценка по вашим записям, без будущих доходов и повседневных покупок.
+      </p>
+    }
+    <div class="section-title">
+      <h2>Этот месяц</h2>
+      <input
+        type="month"
+        aria-label="Месяц финансовой сводки"
+        [(ngModel)]="month"
+        required
+      />
+    </div>
+    <div class="account-grid">
+      @for (total of totals; track total.currency) {
+        <article class="finance-panel month-card">
+          <span>{{ total.currency }}</span>
+          <div>
+            <span>Доходы</span
+            ><b class="income">{{ format(total.income, total.currency) }}</b>
+          </div>
+          <div>
+            <span>Расходы</span
+            ><b>{{ format(total.expense, total.currency) }}</b>
+          </div>
+          <small>Переводы между своими счетами не учитываются.</small>
+        </article>
+      }
+    </div>
+    <div class="section-title">
+      <h2>Ближайшие платежи</h2>
+      <button class="text-button" (click)="tab = 'plan'">Весь план →</button>
+    </div>
+    @for (payment of upcoming; track payment.id) {
+      <article class="payment-row finance-panel">
+        <div class="payment-date" [class.overdue]="payment.due < today">
+          {{ date(payment.due) }}
+        </div>
+        <div class="payment-main">
+          <h3>{{ payment.title }}</h3>
+          <p>
+            {{ account(payment.accountId)?.name }} ·
+            {{ categoryLabel(payment.categoryId) }}
+          </p>
+          @if (payment.due < today) {
+            <small class="warning">Ожидает подтверждения</small>
+          } @else if (payment.due <= addReminder(payment)) {
+            <small>Скоро оплата</small>
+          }
+        </div>
+        <strong>{{
+          payment.amount === null
+            ? "Уточнить сумму"
+            : format(payment.amount, account(payment.accountId)?.currency)
+        }}</strong
+        ><button
+          class="outline-button"
+          (click)="openEntry('expense', undefined, payment)"
+          [disabled]="disabled"
+        >
+          Оплачено
+        </button>
+      </article>
+    } @empty {
+      <div class="empty-box">
+        <app-icon name="calendar" />
+        <h3>Без неожиданных счетов</h3>
+        <p>
+          Добавьте аренду, интернет или подписку. Будущие платежи появятся
+          здесь, а расход — после вашего подтверждения.
+        </p>
+        <button
+          class="outline-button"
+          (click)="openTemplate()"
+          [disabled]="disabled || !accounts.length"
+        >
+          Добавить платёж
+        </button>
+      </div>
+    }
+  }
+  @if (tab === "transactions") {
+    <div class="filter-grid">
+      <label>Месяц<input type="month" [(ngModel)]="month" /></label
+      ><label
+        >Поиск<input
+          type="search"
+          [(ngModel)]="search"
+          placeholder="Комментарий, тег, счёт" /></label
+      ><label
+        >Категория<select [(ngModel)]="filterCategory">
+          <option value="">Все категории</option>
+          <option value="none">Без категории</option>
+          @for (category of categories; track category.id) {
+            <option [value]="category.id">{{ category.name }}</option>
+          }
+        </select></label
+      ><label
+        >Тип<select [(ngModel)]="filterKind">
+          <option value="">Все операции</option>
+          <option value="expense">Расходы</option>
+          <option value="income">Доходы</option>
+          <option value="transfer">Переводы</option>
+        </select></label
+      >
+    </div>
+    <div class="transaction-list">
+      @for (transaction of transactions; track transaction.id) {
+        <article class="transaction finance-panel">
+          <button
+            class="transaction-open"
+            (click)="openEntry(transaction.kind, transaction)"
+          >
+            <span
+              class="transaction-symbol"
+              [class.income]="transaction.kind === 'income'"
+              >{{
+                transaction.kind === "income"
+                  ? "+"
+                  : transaction.kind === "transfer"
+                    ? "↔"
+                    : "−"
+              }}</span
+            ><span class="transaction-description"
+              ><b>{{
+                transaction.note ||
+                  (transaction.kind === "transfer"
+                    ? "Перевод"
+                    : categoryLabel(transaction.categoryId))
+              }}</b
+              ><small
+                >{{ date(transaction.date) }} ·
+                {{ account(transaction.accountId)?.name }}
+                @if (transaction.kind === "transfer") {
+                  → {{ account(transaction.toAccountId)?.name }}
+                } @else {
+                  · {{ categoryLabel(transaction.categoryId) }}
+                }
+              </small>
+              @if (transaction.tags.length) {
+                <small>#{{ transaction.tags.join(" #") }}</small>
+              }
+              @if (transaction.occurrenceId) {
+                <small>Связан с платежом</small>
+              }</span
+            ><strong [class.income]="transaction.kind === 'income'">{{
+              format(
+                transaction.amount,
+                account(transaction.accountId)?.currency
+              )
+            }}</strong></button
+          ><button
+            class="icon-button"
+            aria-label="Повторить операцию"
+            (click)="openEntry(transaction.kind, transaction, undefined, true)"
+          >
+            <app-icon name="repeat" />
+          </button>
+        </article>
+      } @empty {
+        <div class="empty-box">
+          <app-icon name="list" />
+          <h3>Здесь будут ваши записи</h3>
+          <p>Добавьте первую операцию или измените фильтры.</p>
+        </div>
+      }
+    </div>
+  }
+  @if (tab === "plan") {
+    <div class="section-title">
+      <div>
+        <h2>План платежей</h2>
+        <p class="helper">
+          Ожидаемый платёж не меняет остаток. Подтвердите фактическую оплату.
+        </p>
+      </div>
+      <button
+        class="primary-button"
+        (click)="openTemplate()"
+        [disabled]="disabled || !accounts.length"
+      >
+        <app-icon name="plus" />Регулярный платёж
+      </button>
+    </div>
+    <label class="month-filter"
+      >Месяц<input type="month" [(ngModel)]="month"
+    /></label>
+    @for (payment of shownPayments; track payment.id) {
+      <article class="finance-panel payment-detail">
+        <div class="section-title">
+          <div>
+            <span class="payment-date" [class.overdue]="payment.due < today"
+              >{{ date(payment.due)
+              }}{{ payment.due < today ? " · подтвердите оплату" : "" }}</span
+            >
+            <h3>{{ payment.title }}</h3>
+            <p class="helper">
+              {{ account(payment.accountId)?.name }} ·
+              {{ categoryLabel(payment.categoryId) }}
+            </p>
+          </div>
+          <strong>{{
+            payment.amount === null
+              ? "Сумма уточняется"
+              : format(payment.amount, account(payment.accountId)?.currency)
+          }}</strong>
+        </div>
+        <div class="payment-controls">
+          <button
+            class="primary-button"
+            (click)="openEntry('expense', undefined, payment)"
+            [disabled]="disabled"
+          >
+            Оплачено / изменить сумму</button
+          ><button
+            class="outline-button"
+            (click)="rescheduleId = payment.id; rescheduleDate = payment.due"
+          >
+            Перенести</button
+          ><button
+            class="outline-button"
+            (click)="skip(payment)"
+            [disabled]="disabled"
+          >
+            Пропустить
+          </button>
+        </div>
+        @if (rescheduleId === payment.id) {
+          <div class="inline-form">
+            <label
+              >Новая дата<input
+                type="date"
+                [(ngModel)]="rescheduleDate" /></label
+            ><button
+              class="outline-button"
+              (click)="reschedule(payment)"
+              [disabled]="disabled"
+            >
+              Сохранить дату</button
+            ><button class="text-button" (click)="rescheduleId = ''">
+              Отмена
+            </button>
+          </div>
+        }
+        <details>
+          <summary>Уже записали расход?</summary>
+          <div class="inline-form">
+            <select
+              aria-label="Записанный расход для платежа"
+              [(ngModel)]="linkId"
+            >
+              <option value="">Выберите существующую операцию</option>
+              @for (transaction of candidates(payment); track transaction.id) {
+                <option [value]="transaction.id">
+                  {{ date(transaction.date) }} ·
+                  {{
+                    transaction.note || categoryLabel(transaction.categoryId)
+                  }}
+                  ·
+                  {{
+                    format(
+                      transaction.amount,
+                      account(transaction.accountId)?.currency
+                    )
+                  }}
+                </option>
+              }</select
+            ><button
+              class="outline-button"
+              (click)="link(payment)"
+              [disabled]="disabled || !linkId"
+            >
+              Связать без нового расхода
+            </button>
+          </div>
+        </details>
+      </article>
+    } @empty {
+      <div class="empty-box">
+        <h3>В этом месяце нет ожидающих платежей</h3>
+        <p>Добавьте расписание или выберите другой месяц.</p>
+      </div>
+    }
+    <h2 class="subheading">Расписания</h2>
+    <p class="helper">
+      План формируется на год вперёд и продлевается при открытии. Изменения
+      касаются будущих неоплаченных платежей; перенесённые даты и история
+      сохраняются.
+    </p>
+    @for (template of data.templates; track template.id) {
+      <article class="finance-panel template-row">
+        <div>
+          <h3>{{ template.title }}</h3>
+          <p>
+            {{
+              template.paused
+                ? "Приостановлен"
+                : "Ежемесячно, " + template.day + " числа"
+            }}
+            ·
+            {{
+              template.amount === null
+                ? "Сумма уточняется"
+                : format(template.amount, account(template.accountId)?.currency)
+            }}
+          </p>
+          @if (template.until) {
+            <small>До {{ date(template.until) }}</small>
+          }
+          <small
+            >Напоминание в обзоре за {{ template.remindDays }} дн. · начало
+            {{ date(template.start) }}</small
+          >
+        </div>
+        <div class="payment-controls">
+          <button class="outline-button" (click)="openTemplate(template)">
+            Изменить</button
+          ><button
+            class="outline-button"
+            (click)="toggleTemplate(template)"
+            [disabled]="disabled"
+          >
+            {{ template.paused ? "Возобновить" : "Приостановить" }}
+          </button>
+        </div>
+      </article>
+    }
+    @if (data.templates.length) {
+      <p class="helper">
+        Пауза или завершение расписания в Flow не отменяет подписку у сервиса.
+        Отмените её отдельно.
+      </p>
+    }
+    @if (historyPayments.length) {
+      <h2 class="subheading">Оплачено и пропущено</h2>
+      @for (payment of historyPayments; track payment.id) {
+        <article class="finance-panel history-row">
+          <span>{{ date(payment.due) }} · {{ payment.title }}</span
+          ><span>{{
+            payment.status === "paid" ? "Оплачено" : "Пропущено"
+          }}</span>
+          @if (payment.status === "skipped") {
+            <button
+              class="text-button"
+              (click)="restorePayment(payment)"
+              [disabled]="disabled"
+            >
+              Вернуть в план
+            </button>
+          }
+        </article>
+      }
+    }
+  }
+  @if (tab === "settings") {
+    <section class="finance-panel">
+      <h2>Счета</h2>
+      <p class="helper">
+        Отдельно для карты, наличных или накопительного счёта. Валюты не
+        складываются между собой. Переводы доступны между счетами в одной
+        валюте.
+      </p>
+      @for (account of accounts; track account.id) {
+        <div class="settings-row">
+          <div>
+            <b>{{ account.name }}</b
+            ><small
+              >{{ account.currency }} · начальный остаток
+              {{ format(account.opening, account.currency) }}</small
+            >
+          </div>
+          <button
+            class="text-button"
+            (click)="accountEdit = account.id; accountRename = account.name"
+          >
+            Переименовать
+          </button>
+        </div>
+        @if (accountEdit === account.id) {
+          <form class="inline-form" (ngSubmit)="renameAccount()">
+            <input
+              aria-label="Новое название счёта"
+              name="accountRename"
+              [(ngModel)]="accountRename"
+              maxlength="80"
+              required
+            /><button class="outline-button" [disabled]="disabled">
+              Сохранить
+            </button>
+          </form>
+        }
+      }
+      <form class="settings-form" (ngSubmit)="addAccount()">
+        <label
+          >Название счёта<input
+            name="accountName"
+            [(ngModel)]="accountName"
+            placeholder="Например, основная карта"
+            maxlength="80"
+            required
+        /></label>
+        <div class="form-columns">
+          <label
+            >Валюта<select name="accountCurrency" [(ngModel)]="accountCurrency">
+              @for (currency of currencies; track currency) {
+                <option [value]="currency">{{ currency }}</option>
+              }
+            </select></label
+          ><label
+            >Начальный остаток<input
+              name="opening"
+              [(ngModel)]="opening"
+              placeholder="0,00"
+              inputmode="decimal"
+          /></label>
+        </div>
+        <button class="primary-button" [disabled]="disabled">
+          Добавить счёт
+        </button>
+      </form>
+    </section>
+    <section class="finance-panel">
+      <h2>Свободные категории</h2>
+      <p class="helper">
+        Создавайте здесь или прямо при вводе операции. Одна категория для
+        итогов, дополнительные теги — для поиска.
+      </p>
+      @for (category of categories; track category.id) {
+        <div class="settings-row">
+          <b>{{ category.name }}</b>
+          <div>
+            <button
+              class="text-button"
+              (click)="categoryEdit = category.id; categoryName = category.name"
+            >
+              Изменить</button
+            ><button
+              class="text-button danger"
+              (click)="categoryDelete = category.id"
+            >
+              Удалить
+            </button>
+          </div>
+        </div>
+        @if (categoryDelete === category.id) {
+          <div class="finance-error">
+            Операции останутся, категория будет снята.
+            <button
+              class="text-button"
+              (click)="removeCategory(category)"
+              [disabled]="disabled"
+            >
+              Подтвердить удаление категории</button
+            ><button class="text-button" (click)="categoryDelete = ''">
+              Отмена
+            </button>
+          </div>
+        }
+      }
+      <form class="inline-form" (ngSubmit)="saveCategory()">
+        <input
+          name="categoryName"
+          aria-label="Название категории"
+          [(ngModel)]="categoryName"
+          maxlength="80"
+          required
+          placeholder="Любое удобное название"
+        /><button class="outline-button" [disabled]="disabled">
+          {{ categoryEdit ? "Сохранить категорию" : "Добавить категорию" }}
+        </button>
+        @if (categoryEdit) {
+          <button
+            type="button"
+            class="text-button"
+            (click)="categoryEdit = ''; categoryName = ''"
+          >
+            Отмена
+          </button>
+        }
+      </form>
+    </section>
+    <section class="finance-panel">
+      <h2>Теги финансов</h2>
+      <p class="helper">
+        Расходы и доходы используют отдельные наборы. Звёздочки расходов — от
+        совсем лишнего до обязательного. Порядок в списке определяется частотой
+        использования, а не звёздами.
+      </p>
+      <app-finance-tag-picker
+        [data]="data"
+        kind="expense"
+        [manage]="true"
+        [disabled]="disabled"
+        (saveTag)="saveFinanceTag($event)"
+      />
+      <hr class="tag-divider" />
+      <app-finance-tag-picker
+        [data]="data"
+        kind="income"
+        [manage]="true"
+        [disabled]="disabled"
+        (saveTag)="saveFinanceTag($event)"
+      />
+    </section>
+    <section class="finance-panel">
+      <h2>Резервная копия финансов</h2>
+      <p class="helper">
+        Финансы экспортируются отдельно от задач. Файл содержит ваши суммы и
+        комментарии — храните его в надёжном месте.
+      </p>
+      <div class="payment-controls">
+        <button class="outline-button" (click)="exportBackup()">
+          Скачать финансовую копию</button
+        ><label class="outline-button file-label"
+          >Восстановить из файла<input
+            type="file"
+            accept="application/json,.json"
+            (change)="readBackup($event)"
+        /></label>
+      </div>
+      @if (importData) {
+        <div class="finance-error">
+          Заменить текущие финансы данными из файла?
+          {{ importData.transactions.length }} операций,
+          {{ importData.accounts.length }} счетов. Сначала скачайте текущую
+          копию.
+          <div class="payment-controls">
+            <button
+              class="outline-button"
+              (click)="restoreBackup()"
+              [disabled]="disabled"
+            >
+              Заменить финансы</button
+            ><button class="text-button" (click)="importData = null">
+              Отмена
+            </button>
+          </div>
+        </div>
+      }
+    </section>
+  }
+}
+<datalist id="finance-categories">
+  @for (category of categories; track category.id) {
+    <option [value]="category.name"></option>
+  }
+</datalist>
+<dialog
+  #entryDialog
+  appCloseOnBackdrop
+  (backdropClose)="closeEntry()"
+  class="finance-dialog"
+  aria-labelledby="finance-entry-heading"
+  (cancel)="remember()"
+>
+  <form (ngSubmit)="saveEntry()" (input)="remember()" (change)="remember()">
+    <div class="dialog-heading">
+      <h2 id="finance-entry-heading">
+        {{ entry.occurrenceId ? "Подтвердить оплату" : "Записать операцию" }}
+      </h2>
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="Закрыть ввод операции"
+        (click)="closeEntry()"
+      >
+        <app-icon name="close" />
+      </button>
+    </div>
+    <div class="entry-types">
+      @for (
+        kind of [
+          { id: "expense", label: "Расход" },
+          { id: "income", label: "Доход" },
+          { id: "transfer", label: "Перевод" },
+        ];
+        track kind.id
+      ) {
+        <button
+          type="button"
+          [class.active]="entry.kind === kind.id"
+          [attr.aria-pressed]="entry.kind === kind.id"
+          [disabled]="!!entry.occurrenceId || isEditing"
+          (click)="changeEntryKind(kind.id)"
+        >
+          {{ kind.label }}
+        </button>
+      }
+    </div>
+    <div class="amount-field">
+      <label for="transaction-amount">Сумма · {{ selectedCurrency }}</label
+      ><input
+        #amountInput
+        id="transaction-amount"
+        name="amount"
+        [(ngModel)]="amount"
+        inputmode="decimal"
+        autocomplete="off"
+        placeholder="0,00"
+        maxlength="18"
+        required
+      />
+    </div>
+    @if (entry.kind !== "transfer") {
+      <label class="category-field"
+        >Категория · необязательно<input
+          name="entryCategory"
+          [(ngModel)]="category"
+          list="finance-categories"
+          maxlength="80"
+          placeholder="Выберите или напишите новую"
+      /></label>
+      <div class="category-chips">
+        @for (categoryItem of recentCategories; track categoryItem.id) {
+          <button
+            type="button"
+            [class.active]="category === categoryItem.name"
+            (click)="category = categoryItem.name; remember()"
+          >
+            {{ categoryItem.name }}
+          </button>
+        }
+      </div>
+    }
+    @if (entry.kind === "expense" || entry.kind === "income") {
+      <app-finance-tag-picker
+        [data]="data"
+        [kind]="entry.kind"
+        [selected]="selectedTags"
+        [disabled]="disabled"
+        (selectedChange)="selectTags($event)"
+        (saveTag)="saveFinanceTag($event, true)"
+      />
+    }
+    <div class="form-columns">
+      <label
+        >Счёт<select
+          name="entryAccount"
+          [(ngModel)]="entry.accountId"
+          [disabled]="!!entry.occurrenceId"
+          required
+        >
+          @for (account of accounts; track account.id) {
+            <option [value]="account.id">
+              {{ account.name }} · {{ account.currency }}
+            </option>
+          }
+        </select></label
+      ><label
+        >Дата<input
+          type="date"
+          name="entryDate"
+          [(ngModel)]="entry.date"
+          [max]="today"
+          required
+      /></label>
+    </div>
+    @if (entry.kind === "transfer") {
+      <label
+        >На счёт<select name="entryTo" [(ngModel)]="entry.toAccountId" required>
+          <option value="">Выберите счёт</option>
+          @for (account of accounts; track account.id) {
+            @if (
+              account.id !== entry.accountId &&
+              account.currency === selectedCurrency
+            ) {
+              <option [value]="account.id">{{ account.name }}</option>
+            }
+          }
+        </select></label
+      >
+      <p class="helper">
+        Перевод не входит в доходы и расходы. Обмен валют пока не
+        поддерживается.
+      </p>
+    }
+    <details class="entry-details" appAnimatedDetails>
+      <summary>Комментарий и повторение</summary>
+      <label
+        >Комментарий / название<input
+          name="entryNote"
+          [(ngModel)]="entry.note"
+          maxlength="2000"
+          placeholder="Например, интернет"
+      /></label>
+      @if (entry.kind === "expense" && !entry.occurrenceId && !isEditing) {
+        <label class="check-label"
+          ><input
+            type="checkbox"
+            name="repeat"
+            [(ngModel)]="repeat"
+          />Повторяется ежемесячно</label
+        >
+        @if (repeat) {
+          <label
+            >День месяца<input
+              type="number"
+              name="repeatDay"
+              [(ngModel)]="repeatDay"
+              min="1"
+              max="31"
+              required
+          /></label>
+          <p class="helper">
+            Название берётся из комментария. Эта запись уже оплачена;
+            совпадающий платёж не будет посчитан повторно. Отмена записи
+            сохраняет расписание.
+          </p>
+        }
+      }
+    </details>
+    @if (formError || store.error()) {
+      <p class="finance-error" role="alert">{{ formError || store.error() }}</p>
+    }
+    <div class="entry-footer">
+      <button class="primary-button" [disabled]="disabled">
+        {{ isEditing ? "Сохранить изменения" : "Записать" }}
+      </button>
+      @if (!isEditing && !entry.occurrenceId) {
+        <button
+          type="button"
+          class="outline-button"
+          [disabled]="disabled"
+          (click)="saveEntry(true)"
+        >
+          {{ entry.kind === "expense" ? "Ещё расход" : "Ещё операция" }}
+        </button>
+      }
+      @if (isEditing) {
+        <button
+          type="button"
+          class="text-button danger"
+          (click)="deleteEntry(entry)"
+          [disabled]="disabled"
+        >
+          Удалить операцию
+        </button>
+      }
+    </div>
+  </form>
+</dialog>
+<dialog
+  #paymentDialog
+  appCloseOnBackdrop
+  (backdropClose)="paymentDialog.close()"
+  class="finance-dialog"
+  aria-labelledby="finance-payment-heading"
+>
+  <form (ngSubmit)="savePaymentTemplate()">
+    <div class="dialog-heading">
+      <h2 id="finance-payment-heading">Ежемесячный платёж</h2>
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="Закрыть расписание платежа"
+        (click)="paymentDialog.close()"
+      >
+        <app-icon name="close" />
+      </button>
+    </div>
+    <label
+      >Название платежа<input
+        name="paymentTitle"
+        [(ngModel)]="template.title"
+        maxlength="500"
+        placeholder="Аренда, интернет, подписка"
+        required
+    /></label>
+    <div class="form-columns">
+      <label
+        >Сумма · необязательно<input
+          name="paymentAmount"
+          [(ngModel)]="templateAmount"
+          inputmode="decimal"
+          placeholder="Уточняется" /></label
+      ><label
+        >Счёт<select
+          name="paymentAccount"
+          [(ngModel)]="template.accountId"
+          required
+        >
+          @for (account of accounts; track account.id) {
+            <option [value]="account.id">
+              {{ account.name }} · {{ account.currency }}
+            </option>
+          }
+        </select></label
+      >
+    </div>
+    <p class="helper">
+      Пустая сумма — уточнить при оплате. Для коммунальных счетов можно указать
+      оценку; фактическая сумма подтверждается отдельно.
+    </p>
+    <label
+      >Категория<input
+        name="paymentCategory"
+        [(ngModel)]="templateCategory"
+        list="finance-categories"
+        maxlength="80"
+        placeholder="Выберите или создайте"
+    /></label>
+    <div class="form-columns">
+      <label
+        >Число месяца<input
+          type="number"
+          name="paymentDay"
+          [(ngModel)]="template.day"
+          min="1"
+          max="31"
+          required /></label
+      ><label
+        >Напомнить за, дней<input
+          type="number"
+          name="paymentReminder"
+          [(ngModel)]="template.remindDays"
+          min="0"
+          max="31"
+          required
+      /></label>
+    </div>
+    <div class="form-columns">
+      <label
+        >Начало расписания<input
+          type="date"
+          name="paymentStart"
+          [(ngModel)]="template.start"
+          required /></label
+      ><label
+        >Последняя дата · необязательно<input
+          type="date"
+          name="paymentUntil"
+          [(ngModel)]="template.until"
+          [min]="template.start"
+      /></label>
+    </div>
+    <p class="helper">
+      В коротком месяце платёж на 31-е переносится на последний день.
+      Напоминания показываются в приложении; фоновых push-уведомлений пока нет.
+    </p>
+    @if (templateError || store.error()) {
+      <p class="finance-error" role="alert">
+        {{ templateError || store.error() }}
+      </p>
+    }
+    <div class="entry-footer">
+      <button class="primary-button" [disabled]="disabled">
+        Сохранить расписание
+      </button>
+    </div>
+  </form>
+</dialog>

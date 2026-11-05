@@ -53,6 +53,9 @@ export class PlannerService {
   });
   readonly cloud = computed(() => !!this.user());
   private client: SupabaseClient | null = null;
+  get financialClient() {
+    return this.cloud() ? this.client : null;
+  }
   private stopAuth?: () => void;
   private revision = 0;
   private loadId = 0;
