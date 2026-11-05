@@ -472,8 +472,8 @@ label.file-button:focus-within {
 }
 .minimal-select {
   border: 0;
-  background: transparent;
-  padding: 7px 16px 7px 0;
+  background-color: transparent;
+  padding: 7px var(--select-arrow-space) 7px 0;
   font-size: calc(10px * var(--font-scale));
   color: #989eaa;
   box-shadow: none;
@@ -1022,5 +1022,78 @@ label.file-button:focus-within {
   app-icon {
     width: 16px;
     height: 16px;
+  }
+}
+
+@media (max-width: 760px) {
+  .main-content {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .topbar {
+    height: auto;
+    min-height: 64px;
+    padding-top: env(safe-area-inset-top);
+  }
+  .sidebar {
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
+  .workspace-modes {
+    display: flex;
+    button {
+      flex: 1;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 8px;
+    }
+  }
+  .main-nav > button,
+  .list-nav-row > button:first-child,
+  .view-tabs button {
+    min-height: 44px;
+  }
+  .search-box {
+    min-width: 0;
+    input {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+  .topbar-actions {
+    min-width: 0;
+    flex: 1;
+    justify-content: flex-end;
+  }
+  .search-box {
+    flex: 1;
+    max-width: 180px;
+  }
+  .toast {
+    bottom: max(15px, env(safe-area-inset-bottom));
+    max-width: calc(100vw - 32px);
+  }
+  .error-toast {
+    bottom: calc(85px + env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 380px) {
+  .view-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    flex-basis: 100%;
+  }
+}
+@media (max-width: 760px) {
+  // Previous success messages must not cover commands in the task editor.
+  :host:has(app-task-editor) .notice-toast {
+    z-index: 19;
+  }
+  :host:has(app-task-editor) .error-toast {
+    top: calc(64px + env(safe-area-inset-top));
+    bottom: auto;
   }
 }

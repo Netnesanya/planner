@@ -41,8 +41,11 @@
   margin: 30px auto 23px;
   max-width: 360px;
   width: 90%;
-  font-size: calc(11px * var(--font-scale));
-  text-align: center;
+  font-size: 16px;
+  min-height: 48px;
+  padding: 12px var(--select-arrow-space) 12px 14px;
+  border-radius: 12px;
+  text-align: left;
 }
 .focus-controls {
   display: flex;

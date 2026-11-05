@@ -12,7 +12,8 @@
     "test": "tsx --test tests/*.test.ts",
     "test:e2e": "node tests/browser.mjs",
     "preview": "node scripts/preview.mjs",
-    "format": "prettier --write \"src/**/*.{ts,html,scss}\" \"tests/*.{ts,mjs}\" \"scripts/*.mjs\""
+    "format": "prettier --write \"src/**/*.{ts,html,scss}\" \"tests/*.{ts,mjs}\" \"scripts/*.mjs\"",
+    "test:mobile": "node tests/mobile-webkit.mjs"
   },
   "engines": {
     "node": ">=22.12.0"
