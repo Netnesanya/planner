@@ -24,6 +24,7 @@ import { TodaySummaryComponent } from "./views/today-summary.component";
 import { CycleViewComponent } from "./views/cycle-view.component";
 import { TaskEditorComponent } from "./editor/task-editor.component";
 import { FinanceViewComponent } from "./finance/finance-view.component";
+import { GoalsViewComponent } from "./goals/goals-view.component";
 type View = "list" | "kanban" | "calendar" | "timeline";
 @Component({
   selector: "app-root",
@@ -42,6 +43,7 @@ type View = "list" | "kanban" | "calendar" | "timeline";
     TaskEditorComponent,
     CycleViewComponent,
     FinanceViewComponent,
+    GoalsViewComponent,
   ],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.scss",
@@ -55,10 +57,12 @@ export class AppComponent {
     ? this.store.preferences().view
     : "list") as View;
   area:
-    "tasks" | "stats" | "history" | "focus" | "cycles" | "finance" =
-    this.store.preferences().mode === "finance"
-      ? "finance"
-      : this.store.preferences().mode === "cycles"
+    "tasks" | "stats" | "history" | "focus" | "cycles" | "finance" | "goals" =
+    this.store.preferences().mode === "goals"
+      ? "goals"
+      : this.store.preferences().mode === "finance"
+        ? "finance"
+        : this.store.preferences().mode === "cycles"
           ? "cycles"
           : "tasks";
   pendingCycleId: string | null = null;
@@ -100,6 +104,7 @@ export class AppComponent {
     return parseDate(date).toLocaleDateString("ru-RU", opts);
   }
   get headerTitle() {
+    if (this.area === "goals") return "Долгосрочные цели";
     if (this.area === "finance") return "Финансы";
     if (this.area === "cycles") return "12 недель";
     if (this.area === "stats") return "Ваш прогресс";
@@ -201,7 +206,7 @@ export class AppComponent {
                 (a.start_time || "99").localeCompare(b.start_time || "99"),
       );
   }
-  setMode(mode: "planner" | "cycles" | "finance") {
+  setMode(mode: "planner" | "cycles" | "finance" | "goals") {
     this.area = mode === "planner" ? "tasks" : mode;
     this.search = "";
     this.mobileNav = false;

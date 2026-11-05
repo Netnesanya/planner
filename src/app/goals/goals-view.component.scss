@@ -1,0 +1,377 @@
+@use "../shared/personal-dialog";
+:host {
+  display: block;
+  min-width: 0;
+}
+.goal-toolbar,
+.list-title,
+.dialog-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.goal-toolbar p,
+.section-intro p,
+.quiet,
+.goal-backup {
+  color: var(--muted);
+}
+.goal-toolbar {
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.focus-section {
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background:
+    radial-gradient(ellipse at 50% 0, #27382f88, transparent 65%), #191c21;
+  padding: 24px 14px 18px;
+}
+.section-intro {
+  text-align: center;
+}
+.section-intro p {
+  font-size: 12px;
+  margin: 8px 0 24px;
+}
+.podium {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.16fr) minmax(0, 0.82fr);
+  align-items: end;
+  gap: 7px;
+  min-height: 270px;
+  max-width: 950px;
+  margin: auto;
+}
+.podium-card {
+  min-width: 0;
+  text-align: left;
+  border: 1px solid #3d4e45;
+  border-radius: 16px 16px 9px 9px;
+  background: linear-gradient(150deg, #2d3c32, #21272a);
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  overflow-wrap: anywhere;
+  transition:
+    transform 0.2s,
+    border-color 0.2s;
+}
+.podium-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--mint);
+}
+.first {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 280px;
+  border-color: #9fceae;
+  background: linear-gradient(145deg, #3c5140, #26342c);
+}
+.second {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 230px;
+  background: linear-gradient(145deg, #30373f, #22282d);
+}
+.third {
+  grid-column: 3;
+  grid-row: 1;
+  min-height: 192px;
+  background: linear-gradient(145deg, #3e352e, #282726);
+}
+.rank {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--mint);
+}
+.first .rank {
+  font-size: 48px;
+}
+.rank small {
+  display: block;
+  font-size: 8px;
+  letter-spacing: 1px;
+  margin-top: 5px;
+  color: var(--muted);
+}
+.priority {
+  font-size: 11px;
+  color: #d9c899;
+  letter-spacing: -1px;
+  margin-top: 15px;
+  white-space: nowrap;
+}
+.podium-card h2 {
+  font-size: 14px;
+  line-height: 1.35;
+  margin: 10px 0;
+}
+.first h2 {
+  font-size: 18px;
+}
+.third h2 {
+  font-size: 13px;
+}
+.podium-card p {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #b3c0b6;
+  margin: 0 0 16px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.progress-track {
+  height: 4px;
+  border-radius: 5px;
+  background: #ffffff16;
+  width: 100%;
+  margin-top: auto;
+  overflow: hidden;
+}
+.progress-track i {
+  display: block;
+  height: 100%;
+  background: var(--mint);
+}
+.progress-caption {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.other-goals {
+  margin-top: 32px;
+}
+.list-title h2 {
+  font-size: 19px;
+}
+.list-title small {
+  font-size: 12px;
+  color: var(--muted);
+}
+select,
+input,
+textarea {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background-color: #202329;
+  padding: 12px 14px;
+  font-size: 16px;
+}
+select {
+  padding-right: var(--select-arrow-space);
+}
+.list-title select {
+  width: 145px;
+  font-size: 14px;
+}
+.goal-search {
+  margin: 14px 0;
+  width: 100%;
+  max-width: 400px;
+}
+.goal-row {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 12px;
+  width: 100%;
+  min-height: 32px;
+  padding: 2px 0;
+  border-bottom: 1px solid #ffffff08;
+  font-size: 18px;
+}
+.row-title {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.row-star {
+  font-size: 12px;
+  color: #d9c899;
+  flex-shrink: 0;
+}
+.row-state {
+  font-size: 11px;
+  color: var(--muted);
+}
+.row-percent {
+  font-size: 11px;
+  min-width: 32px;
+  text-align: right;
+  color: var(--muted);
+}
+.goal-backup {
+  margin: 30px 0;
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  align-items: center;
+}
+.goal-backup label {
+  cursor: pointer;
+}
+.empty {
+  grid-column: 1/-1;
+  text-align: center;
+  padding: 25px 10px;
+  max-width: 440px;
+  margin: auto;
+}
+.empty > span {
+  font-size: 46px;
+  color: var(--mint);
+}
+.empty h2 {
+  font-size: 22px;
+}
+.empty p {
+  line-height: 1.7;
+  color: var(--muted);
+  font-size: 14px;
+}
+.error {
+  color: #f2aaa8;
+}
+.quiet {
+  font-size: 12px;
+  line-height: 1.6;
+}
+@media (min-width: 650px) {
+  .focus-section {
+    padding: 32px;
+  }
+  .podium {
+    gap: 18px;
+  }
+  .podium-card {
+    padding: 24px;
+  }
+  .first {
+    min-height: 360px;
+  }
+  .second {
+    min-height: 290px;
+  }
+  .third {
+    min-height: 245px;
+  }
+  .podium-card h2 {
+    font-size: 22px;
+  }
+  .first h2 {
+    font-size: 28px;
+  }
+  .third h2 {
+    font-size: 20px;
+  }
+  .podium-card p {
+    font-size: 13px;
+  }
+  .priority {
+    font-size: 16px;
+    letter-spacing: 1px;
+  }
+  .rank {
+    font-size: 48px;
+  }
+  .first .rank {
+    font-size: 68px;
+  }
+}
+@media (max-width: 370px) {
+  .row-state {
+    display: none;
+  }
+  .focus-section {
+    padding: 20px 8px 12px;
+  }
+  .podium {
+    gap: 5px;
+  }
+  .podium-card {
+    padding: 12px 7px;
+  }
+  .goal-row {
+    font-size: 17px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .podium-card {
+    transition: none;
+  }
+}
+
+.podium-card h2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.first {
+  height: 320px;
+}
+.second {
+  height: 260px;
+}
+.third {
+  height: 220px;
+}
+.podium-card p {
+  -webkit-line-clamp: 2;
+}
+.podium-card h2 {
+  flex-shrink: 0;
+}
+.podium-card .rank,
+.podium-card .priority,
+.progress-track,
+.progress-caption {
+  flex-shrink: 0;
+}
+@media (min-width: 650px) {
+  .first {
+    height: 360px;
+  }
+  .second {
+    height: 290px;
+  }
+  .third {
+    height: 245px;
+  }
+}
+.goal-toolbar {
+  justify-content: flex-end;
+}
+.list-title {
+  flex-wrap: wrap;
+}
+.list-title select {
+  width: 170px;
+}
+
+.podium-card p {
+  flex-shrink: 0;
+}
+.third p {
+  display: none;
+}
+@media (min-width: 650px) {
+  .second h2,
+  .third h2 {
+    -webkit-line-clamp: 2;
+  }
+  .third {
+    padding: 20px;
+  }
+}

@@ -16,7 +16,8 @@
     "test:finance": "node tests/finance-browser.mjs",
     "test:mobile": "node tests/mobile-webkit.mjs",
     "test:finance:tags": "node tests/finance-tags-browser.mjs",
-    "test:ui": "node tests/ui-polish-browser.mjs"
+    "test:ui": "node tests/ui-polish-browser.mjs",
+    "test:goals": "node tests/goals-browser.mjs"
   },
   "engines": {
     "node": ">=22.12.0"

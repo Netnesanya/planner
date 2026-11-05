@@ -192,7 +192,7 @@
         }}</strong>
       </div>
       <div class="topbar-actions">
-        @if (area !== "finance") {
+        @if (area !== "goals" && area !== "finance") {
           <label class="search-box"
             ><app-icon name="search" /><input
               id="global-search"
@@ -222,10 +222,10 @@
     <nav class="workspace-modes" aria-label="Режим планирования">
       <button
         [class.active]="
-          area !== 'cycles' && area !== 'finance'
+          area !== 'cycles' && area !== 'finance' && area !== 'goals'
         "
         [attr.aria-pressed]="
-          area !== 'cycles' && area !== 'finance'
+          area !== 'cycles' && area !== 'finance' && area !== 'goals'
         "
         (click)="setMode('planner')"
       >
@@ -243,6 +243,13 @@
         (click)="setMode('finance')"
       >
         <app-icon name="chart" />Финансы
+      </button>
+      <button
+        [class.active]="area === 'goals'"
+        [attr.aria-pressed]="area === 'goals'"
+        (click)="setMode('goals')"
+      >
+        <app-icon name="flag" />Долгосрочные цели
       </button>
     </nav>
     @if (!store.online()) {
@@ -275,7 +282,9 @@
         <h1>{{ headerTitle }}<span class="heading-dot">.</span></h1>
         <p>
           {{
-            area === "finance"
+            area === "goals"
+              ? "Большие направления, которые остаются с вами."
+              : area === "finance"
                 ? "Деньги, планы и немного спокойствия."
                 : area === "cycles"
                   ? "От важных результатов — к действиям каждой недели."
@@ -403,6 +412,8 @@
           />
         }
       }
+    } @else if (area === "goals") {
+      <app-goals-view />
     } @else if (area === "finance") {
       <app-finance-view />
     } @else if (area === "cycles") {
