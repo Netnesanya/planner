@@ -317,6 +317,24 @@ try {
     .first()
     .click();
   await expect(page.locator(".execution-score strong")).toHaveText("33%");
+  await page.getByLabel("Только невыполненные").check();
+  await expect(page.locator(".weekly-task")).toHaveCount(2);
+  await expect(page.locator(".execution-score strong")).toHaveText("33%");
+  await page.getByLabel("Только невыполненные").uncheck();
+  await expect(page.locator(".weekly-task")).toHaveCount(3);
+  await page
+    .getByRole("button", { name: "Следующая неделя", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Неделя 2", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".day-group")).toHaveCount(3);
+  await page
+    .getByRole("button", { name: "Предыдущая неделя", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Предыдущая неделя", exact: true }),
+  ).toBeDisabled();
   await page.getByRole("tab", { name: "Итоги недели", exact: true }).click();
   await page.getByLabel("Что получилось?").fill("Первая тренировка выполнена.");
   await page

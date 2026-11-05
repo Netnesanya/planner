@@ -400,3 +400,367 @@ p {
     font-size: 21px;
   }
 }
+
+// Cycle overview and weekly workspace share the application's theme tokens.
+:host {
+  max-width: 1480px;
+  margin: 0 auto;
+}
+.cycle-intro {
+  padding: 30px;
+  margin-top: 22px;
+  border: 1px solid color-mix(in srgb, var(--mint) 20%, var(--line));
+  border-radius: 18px;
+  justify-content: flex-start;
+  background:
+    radial-gradient(ellipse at top left, #b9efc915, transparent 70%),
+    var(--panel);
+  p {
+    font-size: 15px;
+    max-width: 850px;
+    overflow-wrap: anywhere;
+  }
+}
+.intro-mark {
+  flex-shrink: 0;
+  padding-right: 28px;
+  border-right: 1px solid var(--line);
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--mint);
+  span {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    margin-top: 12px;
+  }
+}
+.cycle-status {
+  font-size: 13px;
+  font-weight: 600;
+}
+.cycle-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0 30px;
+  > div {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 20px 24px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--panel);
+  }
+  span,
+  small {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  strong {
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.2;
+    small {
+      font-size: 17px;
+      font-weight: 400;
+    }
+  }
+}
+.cycle-progress {
+  height: 5px;
+  margin-top: 8px;
+  background: var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  i {
+    display: block;
+    height: 100%;
+    background: var(--mint);
+  }
+}
+.weeks-label {
+  margin-bottom: 12px;
+}
+.week-strip {
+  button {
+    transition:
+      background 0.15s,
+      border-color 0.15s;
+    min-height: 106px;
+    &:hover {
+      background: var(--elevated);
+      border-color: var(--muted);
+    }
+  }
+  .selected {
+    background: var(--mint-dark);
+    box-shadow: inset 0 0 0 1px var(--mint);
+  }
+}
+.goals-section {
+  padding: 24px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.goal-cards {
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+}
+.cycle-tabs {
+  gap: 6px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--sidebar);
+  button {
+    flex: 1;
+    border: 0;
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+  button[aria-selected="true"] {
+    background: var(--elevated);
+    color: var(--mint);
+    box-shadow: 0 2px 5px #0002;
+  }
+}
+.week-navigation {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  button {
+    min-height: 38px;
+  }
+}
+.week-heading {
+  padding: 22px 24px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.week-heading h2 span {
+  display: block;
+  margin-top: 8px;
+}
+.execution-score {
+  padding-left: 24px;
+  border-left: 1px solid var(--line);
+}
+.pending-filter {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 20px;
+  input {
+    width: 17px;
+    height: 17px;
+    accent-color: var(--mint);
+  }
+  span {
+    border-radius: 6px;
+    padding: 2px 7px;
+    background: var(--elevated);
+  }
+}
+.day-group {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  &.today {
+    border-color: color-mix(in srgb, var(--mint) 45%, var(--line));
+  }
+}
+.day-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  h3 {
+    margin: 0;
+    font-size: 14px;
+    text-transform: capitalize;
+  }
+  small {
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  span {
+    display: inline-block;
+    margin-left: 8px;
+    color: var(--mint);
+    font-size: 10px;
+    padding: 4px 7px;
+    border-radius: 5px;
+    background: var(--mint-dark);
+  }
+}
+.weekly-task + .weekly-task {
+  margin-top: 14px;
+}
+.weekly-task-context {
+  overflow-wrap: anywhere;
+  span:first-child {
+    display: none;
+  }
+}
+.week-empty {
+  padding: 42px 20px;
+  background: var(--panel);
+  .primary-button {
+    margin: 22px auto 0;
+  }
+}
+.panel {
+  background: var(--panel);
+}
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--mint);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .cycle-intro {
+    padding: 20px;
+    align-items: flex-start;
+    p {
+      font-size: 13px;
+    }
+  }
+  .intro-mark {
+    font-size: 42px;
+    padding-right: 16px;
+    span {
+      font-size: 7px;
+      letter-spacing: 0.6px;
+    }
+  }
+  .cycle-metrics {
+    gap: 6px;
+    > div {
+      padding: 14px 10px;
+    }
+    span,
+    small {
+      font-size: 10px;
+    }
+    strong {
+      font-size: 23px;
+      small {
+        font-size: 13px;
+      }
+    }
+  }
+  .weeks-label {
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .week-strip {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+    button {
+      min-height: 94px;
+    }
+  }
+  .goals-section,
+  .week-heading {
+    padding: 18px;
+  }
+  .toolbar-buttons {
+    flex-wrap: wrap;
+    flex-shrink: 1;
+  }
+  .cycle-toolbar {
+    select {
+      max-width: 100%;
+      width: 100%;
+    }
+    > div:first-child {
+      width: 100%;
+    }
+  }
+  .cycle-tabs {
+    gap: 2px;
+    button {
+      font-size: 11px;
+      padding: 10px 8px;
+    }
+  }
+  .execution-score {
+    border: 0;
+    padding-left: 0;
+  }
+  .day-group {
+    padding: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .week-strip button {
+    transition: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .week-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .week-strip small {
+    font-size: 12px;
+  }
+  .week-strip span {
+    font-size: 10px;
+    letter-spacing: 0.4px;
+  }
+  .cycle-tabs button,
+  .days-picker button {
+    min-height: 44px;
+  }
+  .cycle-tabs button {
+    white-space: normal;
+    font-size: 12px;
+  }
+  .week-navigation button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .pending-filter {
+    min-height: 44px;
+  }
+  .cycle-metrics {
+    grid-template-columns: 1fr;
+    > div {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 6px 12px;
+      padding: 16px;
+    }
+    span {
+      font-size: 13px;
+    }
+    small {
+      font-size: 12px;
+    }
+    strong {
+      grid-column: 2;
+      grid-row: 1 / 3;
+    }
+  }
+  .cycle-progress {
+    width: 100%;
+  }
+  .cycle-intro p,
+  p {
+    font-size: 14px;
+  }
+  .intro-mark span {
+    font-size: 9px;
+  }
+}

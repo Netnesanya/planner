@@ -79,6 +79,9 @@
     </div>
   </div>
   <div class="cycle-intro">
+    <div class="intro-mark" aria-hidden="true">
+      12<span>НЕДЕЛЬ ФОКУСА</span>
+    </div>
     <div>
       <span class="cycle-status">{{ statusLabel }}</span>
       <p>
@@ -88,9 +91,38 @@
         }}
       </p>
     </div>
-    <span class="goal-count"
-      ><strong>{{ goals.length }}</strong> целей в фокусе</span
-    >
+  </div>
+  <div class="cycle-metrics">
+    <div>
+      <span>Цели в фокусе</span
+      ><strong
+        >{{ completedGoals }} <small>/ {{ goals.length }}</small></strong
+      ><small>результатов достигнуто</small>
+    </div>
+    <div>
+      <span>Действия за цикл</span
+      ><strong
+        >{{ cycleScore.done }} <small>/ {{ cycleScore.total }}</small></strong
+      ><small>шагов выполнено</small>
+    </div>
+    <div>
+      <span>Путь цикла</span
+      ><strong>{{ elapsedPercent }}<small>%</small></strong>
+      <div
+        class="cycle-progress"
+        role="progressbar"
+        aria-label="Прошедшая часть цикла"
+        [attr.aria-valuenow]="elapsedPercent"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
+        <i [style.width.%]="elapsedPercent"></i>
+      </div>
+    </div>
+  </div>
+  <div class="section-heading weeks-label">
+    <span class="eyebrow">ВАШИ 12 НЕДЕЛЬ</span
+    ><span class="muted small">Выберите неделю, чтобы открыть её план</span>
   </div>
   <div class="week-strip" aria-label="12 недель цикла">
     @for (weekItem of weeks; track weekItem.index) {
@@ -103,7 +135,12 @@
         [attr.aria-label]="'Неделя ' + (weekItem.index + 1)"
         (click)="selectWeek(weekItem.index)"
       >
-        <span>НЕД</span><strong>{{ weekItem.index + 1 }}</strong
+        <span>{{
+          !c.archived && today >= weekItem.from && today <= weekItem.to
+            ? "СЕЙЧАС"
+            : "НЕДЕЛЯ"
+        }}</span
+        ><strong>{{ weekItem.index + 1 }}</strong
         ><small>{{
           dateLabel(weekItem.from, { day: "numeric", month: "short" })
         }}</small
@@ -215,6 +252,27 @@
       (open)="openFromTimeline($event)"
     />
   } @else {
+    <div class="week-navigation">
+      <button
+        class="outline-button compact"
+        aria-label="Предыдущая неделя"
+        [disabled]="week === 0"
+        (click)="selectWeek(week - 1)"
+      >
+        ←
+      </button>
+      <button class="outline-button compact" (click)="currentWeek()">
+        Текущая неделя
+      </button>
+      <button
+        class="outline-button compact"
+        aria-label="Следующая неделя"
+        [disabled]="week === 11"
+        (click)="selectWeek(week + 1)"
+      >
+        →
+      </button>
+    </div>
     <div class="week-heading">
       <div>
         <h2>
@@ -330,36 +388,80 @@
           </div>
         </form>
       }
+      @if (score.total) {
+        <label class="pending-filter"
+          ><input type="checkbox" [(ngModel)]="onlyPending" /> Только
+          невыполненные <span>{{ score.total - score.done }}</span></label
+        >
+      }
       <div class="weekly-tasks">
-        @for (task of score.tasks; track task.id) {
-          <div class="weekly-task">
-            <div class="weekly-task-context">
-              <span>{{
-                dateLabel(task.due_date!, {
-                  weekday: "short",
-                  day: "numeric",
-                  month: "short",
-                })
-              }}</span
-              ><span>◆ {{ goalTitle(task) }}</span>
+        @for (day of weekDays; track day.date) {
+          <section class="day-group" [class.today]="day.date === today">
+            <div class="day-heading">
+              <h3>
+                {{
+                  dateLabel(day.date, {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  })
+                }}
+                @if (day.date === today) {
+                  <span>Сегодня</span>
+                }
+              </h3>
+              <small>{{ day.done }} / {{ day.total }}</small>
             </div>
-            <app-task-card
-              [task]="task"
-              [list]="listById(task.list_id)"
-              [disabled]="store.busy()"
-              (edit)="openTask($event)"
-              (toggle)="toggle($event)"
-              (taskChange)="store.patchTask($event.id, $event.patch)"
-            />
-          </div>
+            @for (task of day.tasks; track task.id) {
+              <div class="weekly-task">
+                <div class="weekly-task-context">
+                  <span>{{
+                    dateLabel(task.due_date!, {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    })
+                  }}</span
+                  ><span>◆ {{ goalTitle(task) }}</span>
+                </div>
+                <app-task-card
+                  [task]="task"
+                  [list]="listById(task.list_id)"
+                  [disabled]="store.busy()"
+                  (edit)="openTask($event)"
+                  (toggle)="toggle($event)"
+                  (taskChange)="store.patchTask($event.id, $event.patch)"
+                />
+              </div>
+            }
+          </section>
         } @empty {
           <div class="week-empty">
             <app-icon name="calendar" />
-            <h3>Какие шаги приблизят к цели?</h3>
+            <h3>
+              {{
+                score.total
+                  ? "Всё выполнено. Отличная работа!"
+                  : "Какие шаги приблизят к цели?"
+              }}
+            </h3>
             <p>
-              Запланируйте действия выше или свяжите существующие задачи с целью
-              в их карточках. Здесь появятся действия с датами этой недели.
+              {{
+                score.total
+                  ? "Снимите фильтр, чтобы увидеть выполненные действия этой недели."
+                  : "Добавьте конкретные шаги к вашим целям. Небольшой выполнимый план помогает начать."
+              }}
             </p>
+            @if (!score.total && goals.length) {
+              <button class="primary-button" (click)="showActions()">
+                <app-icon name="plus" />Добавить первые действия
+              </button>
+            }
+            @if (!goals.length) {
+              <button class="primary-button" (click)="newGoal()">
+                <app-icon name="plus" />Начать с цели
+              </button>
+            }
           </div>
         }
       </div>
