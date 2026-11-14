@@ -45,6 +45,8 @@ export interface Task {
   series_modified?: boolean;
   series_until?: string | null;
   series_skips?: string[];
+  calendar_uid?: string | null;
+  calendar_recurrence_id?: string | null;
 }
 export interface PlanningCycle {
   id: string;
@@ -244,6 +246,8 @@ export function transitionTask(
       ),
       created_at: now.toISOString(),
       source_task_id: id,
+      calendar_uid: null,
+      calendar_recurrence_id: null,
       progress_value: 0,
       subtasks: task.subtasks.map((s) => ({ ...s, done: false })),
     });
@@ -315,6 +319,13 @@ export function validateData(value: unknown): PlannerData {
       (task.is_milestone !== undefined &&
         typeof task.is_milestone !== "boolean") ||
       (task.goal_id != null && typeof task.goal_id !== "string") ||
+      (task.calendar_uid != null &&
+        (typeof task.calendar_uid !== "string" ||
+          !task.calendar_uid ||
+          task.calendar_uid.length > 1024)) ||
+      (task.calendar_recurrence_id != null &&
+        (typeof task.calendar_recurrence_id !== "string" ||
+          task.calendar_recurrence_id.length > 100)) ||
       (task.milestone_color !== undefined &&
         !/^#[0-9a-f]{6}$/i.test(task.milestone_color)) ||
       (task.is_milestone && (!!task.goal_id || task.recurrence !== "none")) ||

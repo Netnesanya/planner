@@ -569,6 +569,12 @@
           >
             Аккаунт и синхронизация
           </button>
+          <button
+            [class.active]="settingsTab === 'calendars'"
+            (click)="settingsTab = 'calendars'"
+          >
+            Календари
+          </button>
         </div>
         <div class="modal-body settings-body">
           @if (settingsTab === "general") {
@@ -624,6 +630,12 @@
                   Очистить локальные данные
                 </button>
               </div>
+            }
+          } @else if (settingsTab === "calendars") {
+            @defer (on immediate) {
+              <app-calendar-transfer />
+            } @placeholder {
+              <p>Загружаем календари…</p>
             }
           } @else {
             @if (store.user(); as user) {

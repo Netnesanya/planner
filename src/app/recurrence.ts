@@ -64,6 +64,8 @@ export function expandRecurrences(
           completed_at: null,
           created_at: new Date().toISOString(),
           source_task_id: null,
+          calendar_uid: null,
+          calendar_recurrence_id: null,
           series_id: root.id,
           series_date: due,
           series_modified: false,
@@ -183,5 +185,7 @@ export function normalizeTask(task: Task): Task {
     series_modified: !!task.series_modified,
     series_until: task.series_until || null,
     series_skips: task.series_skips || [],
+    calendar_uid: task.calendar_uid || null,
+    calendar_recurrence_id: task.calendar_recurrence_id || null,
   };
 }

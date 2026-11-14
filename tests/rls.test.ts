@@ -20,6 +20,7 @@ for (const installation of ["migrations", "bundle"])
             "migrations/001_planner.sql",
             "migrations/002_goals_and_cycles.sql",
             "migrations/003_recurrence_horizon.sql",
+            "migrations/004_calendar_import.sql",
           ];
     for (const file of sqlFiles)
       await db.exec(
@@ -429,6 +430,75 @@ for (const installation of ["migrations", "bundle"])
           (await db.query("select id from tasks where series_id=$1", [root.id]))
             .rows.length,
           1,
+        );
+      },
+    );
+    await t.test(
+      "calendar imports are atomic, duplicate-safe and respect sharing and stale previews",
+      async () => {
+        await as(alice);
+        const original = normalizeTask({
+          ...makeTask(personal, alice, "2026-11-14"),
+          title: "Calendar event",
+          calendar_uid: "calendar-test",
+        });
+        const call = (list: string, changes: unknown[]) =>
+          db.query("select import_calendar_tasks($1,$2::jsonb)", [
+            list,
+            JSON.stringify(changes),
+          ]);
+        await call(personal, [{ task: original, before: null }]);
+        const before = (
+          await db.query("select * from tasks where id=$1", [original.id])
+        ).rows[0];
+        await call(personal, [
+          { task: { ...original, title: "Updated" }, before },
+        ]);
+        await assert.rejects(
+          call(personal, [{ task: original, before }]),
+          /stale/,
+        );
+        const fresh = normalizeTask({
+          ...makeTask(personal, alice),
+          calendar_uid: "fresh",
+          title: "Fresh",
+        });
+        const duplicate = { ...original, id: crypto.randomUUID() };
+        await assert.rejects(
+          call(personal, [
+            { task: fresh, before: null },
+            { task: duplicate, before: null },
+          ]),
+          /duplicate key/,
+        );
+        assert.equal(
+          (await db.query("select id from tasks where id=$1", [fresh.id])).rows
+            .length,
+          0,
+        );
+        await as(bob);
+        await assert.rejects(
+          call(personal, [{ task: original, before: null }]),
+          /access denied/,
+        );
+        await as(alice);
+        await db.query("select share_list($1,$2)", [shared, "bob@example.com"]);
+        await as(bob);
+        const sharedEvent = normalizeTask({
+          ...makeTask(shared, bob),
+          calendar_uid: "shared-event",
+          title: "Shared event",
+        });
+        await call(shared, [{ task: sharedEvent, before: null }]);
+        assert.equal(
+          (await db.query("select id from tasks where id=$1", [sharedEvent.id]))
+            .rows.length,
+          1,
+        );
+        await db.exec("reset role; set role anon");
+        await assert.rejects(
+          call(shared, [{ task: sharedEvent, before: null }]),
+          /permission denied/,
         );
       },
     );

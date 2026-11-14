@@ -1,0 +1,289 @@
+<section class="calendar-transfer" aria-labelledby="transfer-title">
+  <header>
+    <span class="eyebrow">APPLE · GOOGLE · ICALENDAR</span>
+    <h3 id="transfer-title">Ваши планы в одном месте</h3>
+    <p>
+      Перенесите события файлом .ics. Это разовая копия: изменения между
+      приложениями автоматически не передаются.
+    </p>
+  </header>
+  <div class="mode-switch" aria-label="Направление переноса">
+    <button
+      type="button"
+      [class.active]="mode === 'import'"
+      [attr.aria-pressed]="mode === 'import'"
+      (click)="switchMode('import')"
+    >
+      Импорт в Flow
+    </button>
+    <button
+      type="button"
+      [class.active]="mode === 'export'"
+      [attr.aria-pressed]="mode === 'export'"
+      (click)="switchMode('export')"
+    >
+      Экспорт календаря
+    </button>
+  </div>
+  <div class="range-fields">
+    <label
+      >С даты<input
+        type="date"
+        aria-label="Начало диапазона календаря"
+        [(ngModel)]="from"
+        (ngModelChange)="clearPreview()"
+    /></label>
+    <label
+      >По дату<input
+        type="date"
+        aria-label="Конец диапазона календаря"
+        [(ngModel)]="to"
+        (ngModelChange)="clearPreview()"
+    /></label>
+  </div>
+  <label class="zone-field"
+    >Часовой пояс<input
+      list="calendar-zones"
+      aria-label="Часовой пояс календаря"
+      [(ngModel)]="zone"
+      (ngModelChange)="clearPreview()" /><datalist id="calendar-zones">
+      @for (item of zones; track item) {
+        <option [value]="item"></option>
+      }</datalist
+  ></label>
+  <p class="hint">
+    По умолчанию — 12 недель. Время задач Flow и события без указанного пояса
+    считаем в выбранном поясе. Во время осеннего перевода часов используем
+    первое совпадение времени.
+  </p>
+  @if (mode === "import") {
+    <label class="target-list"
+      >Добавить в список<select
+        aria-label="Список для импорта календаря"
+        [(ngModel)]="listId"
+        (ngModelChange)="clearPreview()"
+      >
+        @for (list of store.lists(); track list.id) {
+          <option [value]="list.id">
+            {{ list.name }}{{ list.shared ? " · общий" : "" }}
+          </option>
+        }
+      </select></label
+    >
+    <p class="hint">
+      События добавятся как задачи и будут учитываться в статистике задач. В
+      общем списке их увидят участники.
+    </p>
+    <label class="file-picker"
+      ><span class="file-symbol" aria-hidden="true">↥</span
+      ><strong>{{ fileName || "Выбрать календарь .ics" }}</strong
+      ><span>Apple Calendar / Google Calendar · до 2 МБ</span
+      ><input
+        type="file"
+        accept=".ics,text/calendar"
+        aria-label="Файл календаря .ics"
+        (change)="fileChanged($event)"
+        [disabled]="store.busy()"
+    /></label>
+    @if (raw && !preview() && !reading()) {
+      <button class="outline-button" (click)="parse()">
+        Показать предпросмотр
+      </button>
+    }
+    @if (reading()) {
+      <div class="reading" role="status">
+        Читаем события…<button class="text-button" (click)="clearPreview()">
+          Отменить
+        </button>
+      </div>
+    }
+    @if (preview(); as report) {
+      <div class="preview-summary" aria-live="polite">
+        <strong>{{ newCount }} новых</strong
+        ><span>{{ updateCount }} обновлений</span
+        ><span>{{ sameCount }} без изменений</span>
+      </div>
+      @if (contextChanged) {
+        <p class="error" role="alert">
+          Аккаунт или список изменился. Обновите предпросмотр.
+        </p>
+      }
+      @if (rows().length) {
+        <div class="preview-actions">
+          <span>Обновления выбираются вручную</span
+          ><button class="text-button" (click)="selectNew()">
+            Только новые
+          </button>
+        </div>
+        <div class="event-preview" aria-label="Предпросмотр событий">
+          @for (row of rows(); track row.key) {
+            <label class="event-row" [class.unchanged]="row.kind === 'same'">
+              <input
+                type="checkbox"
+                [checked]="row.selected"
+                [disabled]="
+                  row.kind === 'same' || store.busy() || contextChanged
+                "
+                [attr.aria-label]="
+                  'Импортировать ' + row.entry.title + ' ' + row.entry.date
+                "
+                (change)="toggleRow(row.key, $any($event.target).checked)"
+              />
+              <span class="event-info"
+                ><strong>{{ row.entry.title }}</strong
+                ><span
+                  >{{ row.entry.date }} · {{ row.entry.time || "Весь день" }}
+                  @if (row.entry.time) {
+                    · {{ row.entry.duration }} мин
+                  }
+                </span>
+                @if (row.kind === "update") {
+                  <small>Сейчас: {{ previous(row) }}</small>
+                }
+                @if (row.entry.notes) {
+                  <small class="notes">{{ row.entry.notes }}</small>
+                }
+              </span>
+              <span class="badge" [class.update]="row.kind === 'update'">{{
+                row.kind === "new"
+                  ? "Новое"
+                  : row.kind === "update"
+                    ? "Изменено"
+                    : "Уже есть"
+              }}</span>
+            </label>
+          }
+        </div>
+        <div class="import-footer">
+          <button
+            class="primary-button"
+            (click)="apply()"
+            [disabled]="!selectedCount || store.busy() || contextChanged"
+          >
+            {{
+              store.busy()
+                ? "Сохраняем…"
+                : "Импортировать выбранные (" + selectedCount + ")"
+            }}</button
+          ><button
+            class="text-button"
+            (click)="reset()"
+            [disabled]="store.busy()"
+          >
+            Сбросить
+          </button>
+        </div>
+        <p class="hint">
+          Обновляются название, описание и расписание. Ваши звёзды, прогресс и
+          выполнение сохранятся. Повторения импортируются отдельными задачами
+          только на выбранный период.
+        </p>
+      } @else {
+        <div class="empty">
+          В выбранном диапазоне нет поддерживаемых событий. Проверьте даты и
+          сообщения ниже.
+        </div>
+      }
+      @if (report.outside) {
+        <p class="hint">
+          За пределами выбранного диапазона найдено: {{ report.outside }}.
+          Дальние повторения за горизонтом не подсчитываются.
+        </p>
+      }
+      @if (report.issues.length) {
+        <details class="issues">
+          <summary>
+            Пропущенные события и серии: {{ report.issues.length }}
+          </summary>
+          @for (issue of report.issues; track $index) {
+            <p>
+              <strong>{{ issue.title }}</strong
+              ><br />{{ issue.reason }}
+            </p>
+          }
+        </details>
+      }
+    }
+  } @else {
+    <fieldset class="list-picker">
+      <legend>Какие списки включить</legend>
+      @for (list of store.lists(); track list.id) {
+        <label
+          ><input
+            type="checkbox"
+            [checked]="listIds.includes(list.id)"
+            (change)="toggleList(list.id, $any($event.target).checked)"
+          /><i [style.background]="list.color"></i>{{ list.name }}</label
+        >
+      }
+    </fieldset>
+    <div class="export-options">
+      <label
+        ><input
+          type="checkbox"
+          [(ngModel)]="completed"
+          (ngModelChange)="exportReport.set(null)"
+        />Включить выполненные задачи</label
+      ><label
+        ><input
+          type="checkbox"
+          [(ngModel)]="milestones"
+          (ngModelChange)="exportReport.set(null)"
+        />Включить майлстоуны как события на весь день</label
+      >
+    </div>
+    <button
+      class="primary-button"
+      (click)="download()"
+      [disabled]="!listIds.length || store.loading()"
+    >
+      Скачать .ics
+    </button>
+    <p class="hint">
+      Экспортируются даты, время, длительность и описание. Звёзды, completion
+      ratio и связи с целями остаются в Flow. Для полной копии используйте
+      резервную копию JSON.
+    </p>
+    @if (exportReport(); as report) {
+      @if (!report.count) {
+        <p class="empty">
+          Нет событий для экспорта. Проверьте списки, даты и фильтры.
+        </p>
+      }
+      @if (report.issues.length) {
+        <details class="issues">
+          <summary>Не экспортировано: {{ report.issues.length }}</summary>
+          @for (issue of report.issues; track $index) {
+            <p>
+              <strong>{{ issue.title }}</strong
+              ><br />{{ issue.reason }}
+            </p>
+          }
+        </details>
+      }
+    }
+  }
+  @if (error()) {
+    <p class="error" role="alert">{{ error() }}</p>
+  }
+  @if (success()) {
+    <p class="success" role="status">{{ success() }}</p>
+  }
+  <details class="help">
+    <summary>Как получить или открыть файл?</summary>
+    <p>
+      Google Calendar на компьютере: Настройки → Импорт и экспорт. Apple
+      Calendar на Mac: Файл → Экспорт или Файл → Импорт.
+    </p>
+    <p>
+      Многодневные события и события с переходом через полночь пока не
+      импортируются. Удалённые или отменённые записи из файла не удаляют ваши
+      задачи.
+    </p>
+    <p>
+      Повторный импорт этого же файла в тот же список распознаёт существующие
+      события. При импорте в другой список создаются отдельные задачи. Внешние
+      календари могут создавать дубликаты при повторной ручной загрузке файла.
+    </p>
+  </details>
+</section>

@@ -25,6 +25,7 @@ import {
 } from "./recurrence";
 import { validCycle } from "./planning";
 import { createDemo } from "./demo";
+import { applyImport, ImportRow } from "./integrations/calendar-transfer";
 
 declare global {
   interface Window {
@@ -643,6 +644,52 @@ export class PlannerService {
     a.download = `flow-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  async importCalendar(rows: ImportRow[], listId: string, account: string) {
+    return this.run(async () => {
+      if (
+        (this.user()?.id || LOCAL_USER) !== account ||
+        !this.lists().some((l) => l.id === listId)
+      )
+        throw new Error(
+          "Аккаунт или список изменился. Откройте предпросмотр заново.",
+        );
+      const before = this.tasks();
+      const next = applyImport(rows, before, listId, account);
+      if (!this.cloud()) {
+        this.persist(next);
+        return;
+      }
+      const selected = rows.filter(
+        (row) => row.selected && row.kind !== "same",
+      );
+      const changes = recurrenceDelta(before, next).saved.map((task) => ({
+        task: normalizeTask(task),
+        before: before.some((t) => t.id === task.id)
+          ? normalizeTask(before.find((t) => t.id === task.id)!)
+          : null,
+      }));
+      const revision = this.revision;
+      const { data, error } = await this.client!.rpc("import_calendar_tasks", {
+        target_list: listId,
+        changes,
+      });
+      if (error) {
+        if (error.code === "PGRST202")
+          throw new Error(
+            "Для облачного импорта установите миграцию 004_calendar_import.sql в Supabase.",
+          );
+        throw error;
+      }
+      if (this.user()?.id !== account || this.revision !== revision) return;
+      this.tasks.set(
+        (data || []).map((task: Task) => ({
+          ...task,
+          start_time: task.start_time?.slice(0, 5) || null,
+        })),
+      );
+      this.notice.set(`Импортировано событий: ${selected.length}.`);
+    });
   }
   importData(raw: string) {
     try {

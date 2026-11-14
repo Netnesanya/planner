@@ -524,6 +524,7 @@ label.file-button:focus-within {
 }
 .settings-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 25px;
   padding: 0 25px;
   border-bottom: 1px solid #343e4d;

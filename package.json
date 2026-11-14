@@ -10,7 +10,7 @@
     "build": "ng build",
     "db:bundle": "node scripts/bundle-migrations.mjs",
     "test": "tsx --test tests/*.test.ts",
-    "test:e2e": "node tests/browser.mjs",
+    "test:e2e": "node tests/browser.mjs && node tests/calendar-browser.mjs",
     "preview": "node scripts/preview.mjs",
     "format": "prettier --write \"src/**/*.{ts,html,scss}\" \"tests/*.{ts,mjs}\" \"scripts/*.mjs\""
   },
@@ -24,6 +24,7 @@
     "@angular/forms": "^21.2.0",
     "@angular/platform-browser": "^21.2.0",
     "@supabase/supabase-js": "^2.57.0",
+    "ical.js": "^2.2.1",
     "rxjs": "~7.8.2",
     "tslib": "^2.8.1"
   },

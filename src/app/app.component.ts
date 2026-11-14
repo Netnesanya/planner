@@ -23,6 +23,7 @@ import { FocusViewComponent } from "./views/focus-view.component";
 import { TodaySummaryComponent } from "./views/today-summary.component";
 import { CycleViewComponent } from "./views/cycle-view.component";
 import { TaskEditorComponent } from "./editor/task-editor.component";
+import { CalendarTransferComponent } from "./integrations/calendar-transfer.component";
 type View = "list" | "kanban" | "calendar" | "timeline";
 @Component({
   selector: "app-root",
@@ -40,6 +41,7 @@ type View = "list" | "kanban" | "calendar" | "timeline";
     TodaySummaryComponent,
     TaskEditorComponent,
     CycleViewComponent,
+    CalendarTransferComponent,
   ],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.scss",
@@ -62,7 +64,7 @@ export class AppComponent {
   editor: Task | null = null;
   modal: "settings" | "list" | "share" | null = null;
   confirm: "clear" | "import" | null = null;
-  settingsTab: "general" | "account" = "general";
+  settingsTab: "general" | "account" | "calendars" = "general";
   listEdit: TaskList | null = null;
   listName = "";
   listColor = COLORS[0];
