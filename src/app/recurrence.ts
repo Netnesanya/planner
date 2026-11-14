@@ -5,6 +5,7 @@ export function expandRecurrences(
   input: Task[],
   today = dateKey(),
   owner = "local",
+  limits = { tasks: Infinity, steps: Infinity },
 ): Task[] {
   const tasks = input.map((t) => ({ ...t }));
   const byId = new Map(tasks.map((t) => [t.id, t]));
@@ -29,6 +30,7 @@ export function expandRecurrences(
     task.series_date = task.due_date;
   }
   const horizon = addDays(today, 83);
+  let totalSteps = 0;
   for (const root of [...tasks]) {
     if (
       root.series_id !== root.id ||
@@ -50,11 +52,15 @@ export function expandRecurrences(
     // Bound traversal of imported historical plans, then generate at most 84 days.
     let steps = 0;
     while (due <= end && steps++ < 100000) {
+      if (++totalSteps > limits.steps)
+        throw new Error("Recurrence calculation limit");
       if (
         due >= today &&
         !present.has(due) &&
         !root.series_skips?.includes(due)
       ) {
+        if (tasks.length >= limits.tasks)
+          throw new Error("Calendar task limit");
         tasks.push({
           ...root,
           id: crypto.randomUUID(),
@@ -78,6 +84,8 @@ export function expandRecurrences(
       }
       due = nextDate(due, root.recurrence, anchor);
     }
+    if (due <= end && Number.isFinite(limits.steps))
+      throw new Error("Recurrence calculation limit");
   }
   return tasks;
 }

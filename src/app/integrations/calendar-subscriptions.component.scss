@@ -1,0 +1,122 @@
+:host {
+  display: block;
+}
+section {
+  display: grid;
+  gap: 16px;
+}
+h3,
+h4,
+p {
+  margin: 0;
+}
+p {
+  line-height: 1.6;
+  color: var(--muted);
+}
+h3 {
+  font-size: 1.2rem;
+}
+.create-form {
+  display: grid;
+  gap: 14px;
+}
+label:not(.check) {
+  display: grid;
+  gap: 8px;
+}
+input:not([type="checkbox"]) {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  box-sizing: border-box;
+}
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+}
+input[type="checkbox"] {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 3px 0 0;
+  accent-color: var(--mint);
+}
+fieldset {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+.consent,
+.notice,
+.revealed,
+.confirmation {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.revealed {
+  display: grid;
+  gap: 12px;
+}
+.section-title,
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+article {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+article span,
+small,
+.hint {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.revoked {
+  opacity: 0.65;
+}
+.error,
+.danger {
+  color: var(--danger, #f1a5a5);
+}
+.success {
+  color: var(--mint);
+}
+details {
+  line-height: 1.6;
+}
+summary {
+  cursor: pointer;
+}
+details p {
+  margin-top: 12px;
+}
+button {
+  min-height: 40px;
+}
+@media (max-width: 420px) {
+  fieldset,
+  .revealed,
+  article {
+    padding: 12px;
+  }
+}

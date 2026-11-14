@@ -34,6 +34,7 @@ header p,
   background: var(--bg);
 }
 .mode-switch button {
+  min-width: 0;
   flex: 1;
   padding: 10px 8px;
   border-radius: 8px;

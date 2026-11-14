@@ -20,6 +20,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run build:calendar-function
+      - run: git diff --exit-code -- supabase/functions/calendar-feed/index.ts
       - run: npm test
       - name: Build with public Supabase configuration
         run: npm run build

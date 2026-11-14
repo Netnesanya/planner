@@ -8,7 +8,7 @@ import { PGlite } from "@electric-sql/pglite";
 for (const installation of ["migrations", "bundle"])
   test(`Supabase ${installation}: real PostgreSQL RLS, sharing, repeat transactions and revocation`, async (t) => {
     const db = new PGlite();
-    await db.exec(`create role anon nologin; create role authenticated nologin;
+    await db.exec(`create role anon nologin; create role authenticated nologin; create role service_role nologin;
     create schema auth; create table auth.users(id uuid primary key,email text);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
     grant usage on schema auth,public to authenticated,anon;
@@ -23,6 +23,7 @@ for (const installation of ["migrations", "bundle"])
             "migrations/004_finance.sql",
             "migrations/005_long_goals.sql",
             "migrations/006_calendar_import.sql",
+            "migrations/007_calendar_subscriptions.sql",
           ];
     for (const file of sqlFiles)
       await db.exec(
@@ -634,6 +635,98 @@ for (const installation of ["migrations", "bundle"])
           call(shared, [{ task: sharedEvent, before: null }]),
           /permission denied/,
         );
+      },
+    );
+
+    await t.test(
+      "subscription capabilities isolate owners, rotate, revoke and recheck list membership",
+      async () => {
+        const hash = "a".repeat(64),
+          rotated = "b".repeat(64);
+        const create = (lists: string[], digest = hash) =>
+          db.query(
+            "select create_calendar_subscription('Test',$1,$2::uuid[],'UTC') as id",
+            [digest, lists],
+          );
+        const resolve = async (digest: string) => {
+          await db.exec("reset role; set role service_role");
+          return (
+            await db.query(
+              "select resolve_calendar_subscription($1) as result",
+              [digest],
+            )
+          ).rows[0].result as any;
+        };
+        await as(bob);
+        await assert.rejects(create([personal]), /access denied/);
+        await as(alice);
+        await db.query("select share_list($1,$2)", [shared, "bob@example.com"]);
+        await as(bob);
+        const id = (await create([shared])).rows[0].id;
+        await assert.rejects(
+          db.query("select token_hash from calendar_subscriptions"),
+          /permission denied/,
+        );
+        await assert.rejects(
+          db.query("select resolve_calendar_subscription($1)", [hash]),
+          /permission denied/,
+        );
+        await assert.rejects(
+          db.query("update calendar_subscriptions set name='forged'"),
+          /permission denied/,
+        );
+        await as(alice);
+        assert.equal(
+          (
+            await db.query(
+              "select id from calendar_subscriptions where id=$1",
+              [id],
+            )
+          ).rows.length,
+          0,
+        );
+        await assert.rejects(
+          db.query("select revoke_calendar_subscription($1)", [id]),
+          /not found/,
+        );
+        let payload = await resolve(hash);
+        assert.ok(payload);
+        assert.equal(
+          payload.tasks.some((t: any) => t.list_id === personal),
+          false,
+        );
+        await as(bob);
+        await db.query("select rotate_calendar_subscription($1,$2)", [
+          id,
+          rotated,
+        ]);
+        assert.equal(await resolve(hash), null);
+        assert.ok(await resolve(rotated));
+        await as(alice);
+        await db.query("select unshare_list($1,$2)", [shared, bob]);
+        assert.equal(await resolve(rotated), null);
+        await as(alice);
+        await db.query("select share_list($1,$2)", [shared, "bob@example.com"]);
+        await as(bob);
+        await db.query("select revoke_calendar_subscription($1)", [id]);
+        assert.equal(await resolve(rotated), null);
+        await db.exec("reset role;set role anon");
+        await assert.rejects(create([shared]), /permission denied/);
+        await as(alice);
+        const old = (
+          await db.query("select calendar_revision from tasks where id=$1", [
+            task,
+          ])
+        ).rows[0].calendar_revision;
+        await db.query("update tasks set title=title||' changed' where id=$1", [
+          task,
+        ]);
+        const after = (
+          await db.query("select calendar_revision from tasks where id=$1", [
+            task,
+          ])
+        ).rows[0].calendar_revision;
+        assert.ok(Number(after) > Number(old));
       },
     );
     await db.close();

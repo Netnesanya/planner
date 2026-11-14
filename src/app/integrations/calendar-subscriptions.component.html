@@ -1,0 +1,180 @@
+<section aria-labelledby="subscription-title">
+  <h3 id="subscription-title">Подписка на Flow</h3>
+  <p>
+    Задачи автоматически появляются в Apple или Google Calendar. Редактируйте их
+    в Flow; частоту обновления выбирает календарное приложение.
+  </p>
+  @if (!store.cloud()) {
+    <div class="notice">
+      Для подписки войдите в аккаунт во вкладке «Аккаунт и синхронизация».
+      Локальные задачи не доступны серверу.
+    </div>
+  } @else {
+    <form (ngSubmit)="create()" class="create-form">
+      <label
+        >Название<input
+          aria-label="Название подписки"
+          name="name"
+          [(ngModel)]="name"
+          maxlength="100"
+          required
+      /></label>
+      <label
+        >Часовой пояс<input
+          aria-label="Часовой пояс подписки"
+          name="zone"
+          [(ngModel)]="zone"
+          required
+      /></label>
+      <fieldset>
+        <legend>Списки для подписки</legend>
+        @for (list of store.lists(); track list.id) {
+          <label class="check"
+            ><input
+              type="checkbox"
+              [checked]="listIds.includes(list.id)"
+              (change)="toggleList(list.id, $any($event.target).checked)"
+            />{{ list.name }}</label
+          >
+        }
+      </fieldset>
+      <label class="check"
+        ><input
+          type="checkbox"
+          name="completed"
+          [(ngModel)]="completed"
+        />Включить выполненные задачи</label
+      >
+      <label class="check"
+        ><input
+          type="checkbox"
+          name="milestones"
+          [(ngModel)]="milestones"
+        />Включить майлстоуны</label
+      >
+      <p class="hint">
+        Ближайшие 12 недель и предыдущие 4 недели. Повторения Flow продолжаются
+        на сервере, даже когда приложение закрыто. Импортированные серии .ics
+        остаются в ранее выбранном диапазоне.
+      </p>
+      <label class="check consent"
+        ><input type="checkbox" name="consent" [(ngModel)]="consent" />Понимаю:
+        любой обладатель ссылки увидит названия, описания и расписание выбранных
+        списков, включая общие.</label
+      >
+      <button
+        class="primary-button"
+        type="submit"
+        [disabled]="busy() || loading() || !consent || !listIds.length"
+      >
+        Создать ссылку
+      </button>
+    </form>
+    @if (revealed(); as link) {
+      <div class="revealed">
+        <strong>Сохраните ссылку сейчас</strong>
+        <p>
+          После закрытия окна её нельзя показать снова. Можно будет выпустить
+          новую.
+        </p>
+        <input
+          aria-label="Ссылка подписки"
+          [value]="link.url"
+          readonly
+          spellcheck="false"
+          (focus)="$any($event.target).select()"
+        />
+        <button class="outline-button" (click)="copy()">
+          Копировать ссылку
+        </button>
+      </div>
+    }
+    @if (message()) {
+      <p role="status" class="success">{{ message() }}</p>
+    }
+    @if (error()) {
+      <p role="alert" class="error">{{ error() }}</p>
+    }
+    <div class="section-title">
+      <h4>Ваши подписки</h4>
+      <button
+        class="text-button"
+        (click)="load()"
+        [disabled]="loading() || busy()"
+      >
+        Обновить список
+      </button>
+    </div>
+    @if (loading()) {
+      <p role="status">Загружаем подписки…</p>
+    }
+    @for (item of subscriptions(); track item.id) {
+      <article [class.revoked]="item.revoked_at">
+        <strong>{{ item.name }}</strong
+        ><span>{{ listNames(item.list_ids) }}</span
+        ><small
+          >{{ item.timezone }} ·
+          {{ item.revoked_at ? "Отозвана" : "Активна" }}</small
+        >
+        @if (!item.revoked_at) {
+          <div class="actions">
+            <button
+              class="text-button"
+              (click)="confirmAction.set({ id: item.id, kind: 'rotate' })"
+              [disabled]="busy()"
+            >
+              Новая ссылка</button
+            ><button
+              class="text-button danger"
+              (click)="confirmAction.set({ id: item.id, kind: 'revoke' })"
+              [disabled]="busy()"
+            >
+              Отозвать
+            </button>
+          </div>
+          @if (confirmAction()?.id === item.id) {
+            <div class="confirmation">
+              <p>
+                {{
+                  confirmAction()?.kind === "rotate"
+                    ? "Старая ссылка перестанет работать. Новую нужно добавить в календарное приложение."
+                    : "Новые запросы по ссылке будут закрыты. Скачанные ранее события могут остаться в Apple/Google."
+                }}
+              </p>
+              <button
+                class="outline-button"
+                (click)="confirm()"
+                [disabled]="busy()"
+              >
+                Подтвердить</button
+              ><button
+                class="text-button"
+                (click)="confirmAction.set(null)"
+                [disabled]="busy()"
+              >
+                Отмена
+              </button>
+            </div>
+          }
+        }
+      </article>
+    } @empty {
+      @if (!loading()) {
+        <p class="hint">Подписок пока нет.</p>
+      }
+    }
+  }
+  <details>
+    <summary>Как добавить подписку</summary>
+    <p>
+      Apple Calendar на Mac: Файл → Новая подписка на календарь. Google Calendar
+      в браузере: Другие календари → «+» → По URL. Вставьте скопированную
+      ссылку.
+    </p>
+    <p>
+      Потеря доступа хотя бы к одному выбранному списку закрывает всю подписку.
+      Создайте новую для оставшихся списков. Отзыв ссылки не удаляет уже
+      скачанные копии из сторонних приложений.
+    </p>
+  </details>
+</section>

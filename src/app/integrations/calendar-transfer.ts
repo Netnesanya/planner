@@ -142,6 +142,9 @@ export function exportCalendar(
     listIds: string[];
     completed: boolean;
     milestones: boolean;
+    eventIdentity?: (task: Task) => string;
+    eventModified?: (task: Task) => string;
+    eventSequence?: (task: Task) => number;
   },
   now = Date.now(),
 ) {
@@ -186,8 +189,11 @@ export function exportCalendar(
       }
       lines.push(
         "BEGIN:VEVENT",
-        `UID:${flowUid(task)}`,
-        `DTSTAMP:${utc(now)}`,
+        `UID:${options.eventIdentity?.(task) || flowUid(task)}`,
+        `DTSTAMP:${utc(options.eventModified ? Date.parse(options.eventModified(task)) : now)}`,
+        ...(options.eventSequence
+          ? [`SEQUENCE:${options.eventSequence(task)}`]
+          : []),
         ...times,
         `SUMMARY:${escapeText(task.title)}`,
         `DESCRIPTION:${escapeText(task.notes)}`,

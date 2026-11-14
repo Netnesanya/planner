@@ -54,6 +54,9 @@ export class PlannerService {
   });
   readonly cloud = computed(() => !!this.user());
   private client: SupabaseClient | null = null;
+  get calendarClient() {
+    return this.cloud() ? this.client : null;
+  }
   get financialClient() {
     return this.cloud() ? this.client : null;
   }

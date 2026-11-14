@@ -1,4 +1,5 @@
 import { Component, inject, OnDestroy, signal } from "@angular/core";
+import { CalendarSubscriptionsComponent } from "./calendar-subscriptions.component";
 import { FormsModule } from "@angular/forms";
 import { PlannerService } from "../planner.service";
 import { addDays, dateKey, LOCAL_USER } from "../models";
@@ -13,13 +14,13 @@ import { validateRange } from "./calendar-time";
 @Component({
   selector: "app-calendar-transfer",
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, CalendarSubscriptionsComponent],
   templateUrl: "./calendar-transfer.component.html",
   styleUrl: "./calendar-transfer.component.scss",
 })
 export class CalendarTransferComponent implements OnDestroy {
   readonly store = inject(PlannerService);
-  mode: "import" | "export" = "import";
+  mode: "import" | "export" | "subscribe" = "import";
   from = dateKey();
   to = addDays(this.from, 83);
   zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -90,7 +91,7 @@ export class CalendarTransferComponent implements OnDestroy {
     this.success.set("");
     this.exportReport.set(null);
   }
-  switchMode(mode: "import" | "export") {
+  switchMode(mode: "import" | "export" | "subscribe") {
     this.clearPreview();
     this.mode = mode;
   }
