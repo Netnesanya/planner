@@ -20,7 +20,9 @@ for (const installation of ["migrations", "bundle"])
             "migrations/001_planner.sql",
             "migrations/002_goals_and_cycles.sql",
             "migrations/003_recurrence_horizon.sql",
-            "migrations/004_calendar_import.sql",
+            "migrations/004_finance.sql",
+            "migrations/005_long_goals.sql",
+            "migrations/006_calendar_import.sql",
           ];
     for (const file of sqlFiles)
       await db.exec(
@@ -430,6 +432,138 @@ for (const installation of ["migrations", "bundle"])
           (await db.query("select id from tasks where series_id=$1", [root.id]))
             .rows.length,
           1,
+        );
+      },
+    );
+    await t.test(
+      "financial books remain private even for shared-list members; revisions prevent stale writes",
+      async () => {
+        const book = JSON.stringify({
+          version: 1,
+          accounts: [],
+          categories: [],
+          transactions: [],
+          templates: [],
+          payments: [],
+        });
+        await as(alice);
+        await db.query(
+          "insert into finance_books(owner_id,revision,data) values ($1,1,$2::jsonb)",
+          [alice, book],
+        );
+        await as(bob);
+        assert.equal(
+          (await db.query("select * from finance_books")).rows.length,
+          0,
+        );
+        assert.equal(
+          (
+            await db.query(
+              "update finance_books set revision=2 where owner_id=$1 returning owner_id",
+              [alice],
+            )
+          ).rows.length,
+          0,
+        );
+        await assert.rejects(
+          db.query(
+            "insert into finance_books(owner_id,revision,data) values ($1,1,$2::jsonb)",
+            [alice, book],
+          ),
+          /row-level security/,
+        );
+        await db.exec("reset role; set role anon");
+        await assert.rejects(
+          db.query("select * from finance_books"),
+          /permission denied/,
+        );
+        await as(alice);
+        assert.equal(
+          (
+            await db.query(
+              "update finance_books set revision=2 where owner_id=$1 and revision=1 returning revision",
+              [alice],
+            )
+          ).rows.length,
+          1,
+        );
+        assert.equal(
+          (
+            await db.query(
+              "update finance_books set revision=2 where owner_id=$1 and revision=1 returning revision",
+              [alice],
+            )
+          ).rows.length,
+          0,
+        );
+        await assert.rejects(
+          db.query("update finance_books set revision=8 where owner_id=$1", [
+            alice,
+          ]),
+          /revision conflict/,
+        );
+        await assert.rejects(
+          db.query("delete from finance_books where owner_id=$1", [alice]),
+          /permission denied/,
+        );
+        await assert.rejects(
+          db.query(
+            "update finance_books set revision=3,data='{}'::jsonb where owner_id=$1",
+            [alice],
+          ),
+          /check constraint/,
+        );
+      },
+    );
+    await t.test(
+      "long-term goals are private and require sequential revisions",
+      async () => {
+        await as(alice);
+        await db.query(
+          "insert into long_goal_books(owner_id,revision,data) values ($1,1,$2::jsonb)",
+          [alice, JSON.stringify({ version: 1, goals: [] })],
+        );
+        await as(bob);
+        assert.equal(
+          (await db.query("select * from long_goal_books")).rows.length,
+          0,
+        );
+        await assert.rejects(
+          db.query(
+            "insert into long_goal_books(owner_id,revision,data) values ($1,1,$2::jsonb)",
+            [alice, JSON.stringify({ version: 1, goals: [] })],
+          ),
+          /row-level security/,
+        );
+        await as(alice);
+        assert.equal(
+          (
+            await db.query(
+              "update long_goal_books set revision=2 where owner_id=$1 and revision=1 returning owner_id",
+              [alice],
+            )
+          ).rows.length,
+          1,
+        );
+        assert.equal(
+          (
+            await db.query(
+              "update long_goal_books set revision=2 where owner_id=$1 and revision=1 returning owner_id",
+              [alice],
+            )
+          ).rows.length,
+          0,
+        );
+        await assert.rejects(
+          db.query("update long_goal_books set revision=4 where owner_id=$1", [
+            alice,
+          ]),
+          /revision conflict/,
+        );
+        await db.exec("reset role;set role anon");
+        await assert.rejects(
+          db.query("select * from long_goal_books"),
+          /permission denied/,
         );
       },
     );

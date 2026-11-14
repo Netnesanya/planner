@@ -1,0 +1,204 @@
+<div class="goal-toolbar">
+  <button
+    class="primary-button"
+    (click)="open()"
+    [disabled]="!store.ready() || store.busy()"
+  >
+    + Новая цель
+  </button>
+</div>
+@if (store.error()) {
+  <p class="error" role="alert">
+    {{ store.error() }}
+    <button class="text-button" (click)="store.load()">
+      Повторить загрузку
+    </button>
+  </p>
+}
+@if (store.loading()) {
+  <p>Загружаем цели…</p>
+}
+@if (store.ready()) {
+  <section class="focus-section" aria-label="Три фокусные цели">
+    <div class="section-intro">
+      <span class="eyebrow">ВАШ ГЛАВНЫЙ ФОКУС</span>
+      <p>Три активные цели с наивысшим приоритетом</p>
+    </div>
+    <div class="podium">
+      @for (goal of podium; track goal.id; let i = $index) {
+        <button
+          class="podium-card"
+          [class.first]="i === 0"
+          [class.second]="i === 1"
+          [class.third]="i === 2"
+          (click)="open(goal)"
+          [attr.aria-label]="'Место ' + (i + 1) + ': ' + goal.title"
+        >
+          <span class="rank">{{ i + 1 }}<small>МЕСТО</small></span
+          ><span class="priority"
+            >{{ "★".repeat(goal.priority)
+            }}{{ "☆".repeat(5 - goal.priority) }}</span
+          >
+          <h2>{{ goal.title }}</h2>
+          <p>{{ goal.next || "Выберите ближайший шаг" }}</p>
+          <div class="progress-track">
+            <i [style.width.%]="goal.progress"></i>
+          </div>
+          <span class="progress-caption">{{ goal.progress }}% пути</span>
+        </button>
+      }
+      @if (!podium.length) {
+        <div class="empty">
+          <span>↗</span>
+          <h2>Дайте большому плану место</h2>
+          <p>
+            Добавьте цель и выберите её приоритет звёздами. Здесь появятся ваши
+            три главных направления.
+          </p>
+          <button class="outline-button" (click)="open()">
+            Добавить первую цель
+          </button>
+        </div>
+      }
+    </div>
+  </section>
+  <section class="other-goals">
+    <div class="list-title">
+      <h2>
+        Остальные цели <small>{{ remaining.length }}</small>
+      </h2>
+      <select aria-label="Статус целей" [(ngModel)]="filter">
+        <option value="all">Все статусы</option>
+        <option value="active">Активные</option>
+        <option value="future">На будущее</option>
+        <option value="paused">На паузе</option>
+        <option value="done">Достигнуты</option>
+      </select>
+    </div>
+    <input
+      class="goal-search"
+      aria-label="Поиск долгосрочных целей"
+      placeholder="Найти цель…"
+      [(ngModel)]="search"
+    />
+    <div class="goal-list">
+      @for (goal of remaining; track goal.id) {
+        <button class="goal-row" (click)="open(goal)">
+          <span class="row-star">{{ goal.priority }} ★</span
+          ><span class="row-title">{{ goal.title }}</span
+          ><span class="row-state">{{ statuses[goal.status] }}</span
+          ><span class="row-percent">{{ goal.progress }}%</span>
+        </button>
+      } @empty {
+        <p class="quiet">
+          Пока пусто. Здесь будут планы за пределами главной тройки.
+        </p>
+      }
+    </div>
+  </section>
+  <div class="goal-backup">
+    <span>{{
+      store.planner.cloud()
+        ? "Личные цели · приватное облако"
+        : "Личные цели · в этом браузере"
+    }}</span
+    ><button
+      class="text-button"
+      (click)="store.load()"
+      [disabled]="store.busy()"
+    >
+      Обновить цели</button
+    ><button class="text-button" (click)="export()">Экспорт целей</button
+    ><label class="text-button"
+      >Добавить из копии<input
+        type="file"
+        accept=".json"
+        (change)="import($event)"
+        hidden
+    /></label>
+  </div>
+}
+<dialog
+  #dialog
+  appCloseOnBackdrop
+  (backdropClose)="dialog.close()"
+  aria-labelledby="goal-editor-title"
+>
+  <form (ngSubmit)="save()">
+    <div class="dialog-title">
+      <h2 id="goal-editor-title">Долгосрочная цель</h2>
+      <button
+        class="icon-button"
+        type="button"
+        aria-label="Закрыть цель"
+        (click)="dialog.close()"
+      >
+        ×
+      </button>
+    </div>
+    <label
+      >Название<input
+        name="goalTitle"
+        [(ngModel)]="draft.title"
+        maxlength="200"
+        placeholder="Чего вы хотите достичь?"
+        required
+    /></label>
+    <label
+      >Почему это важно<textarea
+        name="why"
+        [(ngModel)]="draft.why"
+        maxlength="4000"
+        rows="2"
+        placeholder="Смысл, который будет двигать вас вперёд"
+      ></textarea>
+    </label>
+    <app-expense-importance
+      [value]="draft.priority"
+      (valueChange)="draft.priority = $event"
+      [labels]="labels"
+      label="цели"
+    />
+    <label
+      >Статус<select name="status" [(ngModel)]="draft.status">
+        <option value="active">Активна</option>
+        <option value="future">На будущее</option>
+        <option value="paused">На паузе</option>
+        <option value="done">Достигнута</option>
+      </select></label
+    >
+    <label
+      >Ближайший шаг<input
+        name="next"
+        [(ngModel)]="draft.next"
+        maxlength="1000"
+        placeholder="Одно действие, с которого можно начать"
+    /></label>
+    <div class="field-pair">
+      <label
+        >Прогресс, %<input
+          name="progress"
+          type="number"
+          min="0"
+          max="100"
+          [(ngModel)]="draft.progress"
+          required /></label
+      ><label
+        >Ориентир по дате<input
+          name="deadline"
+          type="date"
+          [(ngModel)]="draft.deadline"
+      /></label>
+    </div>
+    <small class="quiet"
+      >Дата необязательна. Прогресс отмечаете вы — цель не ограничена
+      длительностью цикла.</small
+    >
+    @if (error || store.error()) {
+      <p role="alert" class="error">{{ error || store.error() }}</p>
+    }
+    <button class="primary-button" [disabled]="store.busy()">
+      Сохранить цель
+    </button>
+  </form>
+</dialog>

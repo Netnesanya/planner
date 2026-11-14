@@ -1,0 +1,212 @@
+<div class="savings-heading">
+  <div>
+    <span class="eyebrow">ДЕНЬГИ ДЛЯ ВАЖНОГО</span>
+    <h2>Накопления</h2>
+    <p>На дом, отпуск или спокойствие. Без привязки к календарю.</p>
+  </div>
+  <button class="primary-button" (click)="open()" [disabled]="store.busy()">
+    + Новое накопление
+  </button>
+</div>
+<div class="savings-help">
+  Распределяйте деньги со своих счетов. Это резерв, а не расход: остаток счёта
+  не меняется, свободная сумма уменьшается.
+</div>
+<div class="reserve-summary">
+  @for (account of store.data().accounts; track account.id) {
+    @if (reserved(store.data(), account.id) > 0) {
+      <div>
+        <span>{{ account.name }}</span
+        ><strong
+          >{{ format(reserved(store.data(), account.id), account.currency) }} в
+          резерве</strong
+        ><small [class.deficit]="available(store.data(), account.id) < 0"
+          >{{
+            available(store.data(), account.id) < 0
+              ? "Не хватает для резервов: "
+              : "Свободно: "
+          }}{{
+            format(abs(available(store.data(), account.id)), account.currency)
+          }}</small
+        >
+      </div>
+    }
+  }
+</div>
+<button
+  class="text-button archive-toggle"
+  (click)="showArchived = !showArchived"
+>
+  {{ showArchived ? "Текущие накопления" : "Архив накоплений" }}
+</button>
+<div class="savings-grid">
+  @for (goal of goals; track goal.id) {
+    <article class="savings-card">
+      <div class="card-top">
+        <span>{{ goal.currency }}</span
+        ><button class="text-button" (click)="open(goal)">Изменить</button>
+      </div>
+      <h3>{{ goal.title }}</h3>
+      <strong class="saved">{{ format(saved(goal), goal.currency) }}</strong
+      ><span class="target">из {{ format(goal.target, goal.currency) }}</span>
+      <div class="track"><i [style.width.%]="percent(goal)"></i></div>
+      <div class="progress-label">
+        <span>{{ percent(goal) }}% накоплено</span
+        ><span>{{
+          saved(goal) >= goal.target
+            ? "Сумма собрана"
+            : "Осталось " + format(goal.target - saved(goal), goal.currency)
+        }}</span>
+      </div>
+      @if (!goal.archived) {
+        <button
+          class="outline-button"
+          (click)="reserve(goal)"
+          [disabled]="store.busy()"
+        >
+          Распределить деньги
+        </button>
+      }
+      @if (!saved(goal)) {
+        <button
+          class="text-button"
+          (click)="archive(goal)"
+          [disabled]="store.busy()"
+        >
+          {{ goal.archived ? "Вернуть из архива" : "В архив" }}
+        </button>
+      }
+    </article>
+  } @empty {
+    <div class="savings-empty">
+      <h3>
+        {{
+          showArchived ? "Архив пока пуст" : "У каждого накопления — своя цель"
+        }}
+      </h3>
+      <p>
+        Задайте нужную сумму и откладывайте в удобном темпе. Начать можно с
+        малого.
+      </p>
+    </div>
+  }
+</div>
+<dialog
+  #editor
+  appCloseOnBackdrop
+  (backdropClose)="editor.close()"
+  aria-labelledby="savings-title"
+>
+  <form (ngSubmit)="save()">
+    <div class="dialog-heading">
+      <h2 id="savings-title">
+        {{ editId ? "Изменить накопление" : "Новое накопление" }}
+      </h2>
+      <button
+        class="icon-button"
+        type="button"
+        aria-label="Закрыть накопление"
+        (click)="editor.close()"
+      >
+        ×
+      </button>
+    </div>
+    <label
+      >Название накопления<input
+        name="savingsTitle"
+        [(ngModel)]="title"
+        maxlength="200"
+        placeholder="Например, свой дом"
+        required /></label
+    ><label
+      >Валюта<select
+        name="savingsCurrency"
+        [(ngModel)]="currency"
+        [disabled]="!!editId"
+      >
+        <option>USD</option>
+        <option>EUR</option>
+        <option>RSD</option>
+      </select></label
+    ><label
+      >Нужная сумма<input
+        name="savingsTarget"
+        inputmode="decimal"
+        [(ngModel)]="target"
+        placeholder="150 000"
+        required
+    /></label>
+    <p class="helper">
+      Начальная сумма — 0. После создания распределите реальные деньги со
+      счетов.
+    </p>
+    @if (error || store.error()) {
+      <p class="error" role="alert">{{ error || store.error() }}</p>
+    }
+    <button class="primary-button" [disabled]="store.busy()">
+      Сохранить накопление
+    </button>
+  </form>
+</dialog>
+<dialog
+  #allocation
+  appCloseOnBackdrop
+  (backdropClose)="allocation.close()"
+  aria-labelledby="allocation-title"
+>
+  <form (ngSubmit)="apply()">
+    <div class="dialog-heading">
+      <h2 id="allocation-title">Распределить деньги</h2>
+      <button
+        class="icon-button"
+        type="button"
+        aria-label="Закрыть распределение"
+        (click)="allocation.close()"
+      >
+        ×
+      </button>
+    </div>
+    <p>{{ selected?.title }}</p>
+    <label
+      >Действие<select name="allocationDirection" [(ngModel)]="direction">
+        <option value="add">В резерв накопления</option>
+        <option value="release">Освободить из резерва</option>
+      </select></label
+    ><label
+      >Счёт<select name="allocationAccount" [(ngModel)]="accountId" required>
+        <option value="" disabled>Выберите счёт</option>
+        @for (account of accounts; track account.id) {
+          <option [value]="account.id">
+            {{ account.name }} · {{ account.currency }}
+          </option>
+        }
+      </select></label
+    >
+    @if (accountId) {
+      <small class="helper"
+        >Свободно на счёте:
+        {{ format(available(store.data(), accountId), selected!.currency)
+        }}<br />В этом накоплении на счёте:
+        {{ format(selectedReserve, selected!.currency) }}
+      </small>
+    }
+    @if (!accounts.length) {
+      <p class="helper">
+        Сначала добавьте счёт в {{ selected?.currency }} в настройках финансов.
+      </p>
+    }
+    <label
+      >Сумма распределения<input
+        name="allocationAmount"
+        inputmode="decimal"
+        [(ngModel)]="amount"
+        required
+    /></label>
+    @if (error || store.error()) {
+      <p class="error" role="alert">{{ error || store.error() }}</p>
+    }
+    <button class="primary-button" [disabled]="store.busy() || !accountId">
+      {{ direction === "add" ? "Зарезервировать" : "Освободить деньги" }}
+    </button>
+  </form>
+</dialog>

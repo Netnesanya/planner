@@ -1,4 +1,4 @@
--- Stable calendar identities and atomic, optimistic import. Run once after 003.
+-- Stable calendar identities and atomic, optimistic import. Originally named 004_calendar_import.sql; do not rerun if already applied.
 begin;
 alter table public.tasks add column calendar_uid text check(length(calendar_uid) between 1 and 1024);
 alter table public.tasks add column calendar_recurrence_id text check(length(calendar_recurrence_id)<=100);

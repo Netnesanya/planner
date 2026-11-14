@@ -54,6 +54,9 @@ export class PlannerService {
   });
   readonly cloud = computed(() => !!this.user());
   private client: SupabaseClient | null = null;
+  get financialClient() {
+    return this.cloud() ? this.client : null;
+  }
   private stopAuth?: () => void;
   private revision = 0;
   private loadId = 0;
@@ -677,7 +680,7 @@ export class PlannerService {
       if (error) {
         if (error.code === "PGRST202")
           throw new Error(
-            "Для облачного импорта установите миграцию 004_calendar_import.sql в Supabase.",
+            "Для облачного импорта установите миграцию 006_calendar_import.sql в Supabase.",
           );
         throw error;
       }

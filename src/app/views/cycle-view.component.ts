@@ -8,6 +8,7 @@ import { IconComponent } from "../icon.component";
 import { addDays, PlanningCycle, Task } from "../models";
 import {
   cycleEnd,
+  dayDistance,
   cycleWeek,
   newCycle,
   planActions,
@@ -32,6 +33,7 @@ export class CycleViewComponent extends TaskViewBase {
     this.store.cycles()[0]?.id ||
     "";
   selectedWeek = -1;
+  onlyPending = false;
   tab: "week" | "timeline" | "review" = "week";
   draft: PlanningCycle | null = null;
   choosingGoals = false;
@@ -76,6 +78,44 @@ export class CycleViewComponent extends TaskViewBase {
       index: i,
       ...weekScore(this.store.tasks(), this.cycle!, i),
     }));
+  }
+  get elapsedPercent() {
+    return Math.max(
+      0,
+      Math.min(
+        100,
+        Math.round(
+          (dayDistance(this.cycle!.start_date, this.today) / 84) * 100,
+        ),
+      ),
+    );
+  }
+  get completedGoals() {
+    return this.goals.filter((goal) => goal.status === "done").length;
+  }
+  get cycleScore() {
+    const weeks = this.weeks;
+    const total = weeks.reduce((sum, week) => sum + week.total, 0);
+    const done = weeks.reduce((sum, week) => sum + week.done, 0);
+    return { total, done };
+  }
+  get weekDays() {
+    const tasks = this.score.tasks;
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = addDays(this.score.from, index);
+      const all = tasks.filter((task) => task.due_date === date);
+      return {
+        date,
+        done: all.filter((task) => task.status === "done").length,
+        total: all.length,
+        tasks: all.filter(
+          (task) => !this.onlyPending || task.status !== "done",
+        ),
+      };
+    }).filter((day) => day.tasks.length);
+  }
+  currentWeek() {
+    this.selectWeek(cycleWeek(this.cycle!));
   }
   get statusLabel() {
     const c = this.cycle!;

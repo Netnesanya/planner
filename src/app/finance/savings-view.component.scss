@@ -1,0 +1,126 @@
+@use "../shared/personal-dialog";
+:host {
+  display: block;
+  min-width: 0;
+}
+.savings-heading,
+.card-top,
+.dialog-heading,
+.progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.savings-heading {
+  flex-wrap: wrap;
+  margin: 25px 0;
+}
+.savings-heading h2 {
+  font-size: 28px;
+  margin: 8px 0;
+}
+.savings-heading p,
+.helper,
+.savings-empty p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.savings-help {
+  border: 1px solid #516e54;
+  background: #b9efc908;
+  padding: 16px;
+  border-radius: 14px;
+  font-size: 13px;
+  color: #b9cbbd;
+  line-height: 1.6;
+}
+.reserve-summary {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+.reserve-summary > div {
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  flex: 1;
+  min-width: 180px;
+}
+.reserve-summary span,
+.reserve-summary small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.reserve-summary .deficit {
+  color: #f4aaa6;
+}
+.archive-toggle {
+  margin: 4px 0 18px;
+}
+.savings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+  gap: 16px;
+}
+.savings-card {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 22px;
+  background: linear-gradient(140deg, #27362d66, #1c2025);
+  min-width: 0;
+}
+.card-top > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+h3 {
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+.saved {
+  display: block;
+  font-size: 28px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.target {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin: 6px 0 22px;
+}
+.track {
+  height: 6px;
+  background: #ffffff12;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.track i {
+  display: block;
+  height: 100%;
+  background: var(--mint);
+}
+.progress-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 10px 0 24px;
+  flex-wrap: wrap;
+}
+.savings-card > .outline-button {
+  width: 100%;
+}
+.savings-card > .text-button {
+  display: block;
+  margin-top: 14px;
+}
+.savings-empty {
+  padding: 24px 0;
+}
+.error {
+  color: #f2aaa8;
+}

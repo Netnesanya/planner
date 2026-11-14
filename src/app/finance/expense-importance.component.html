@@ -1,0 +1,31 @@
+<div class="importance-caption" aria-live="polite">
+  @if (countText) {
+    <span>{{ countText }} · </span>
+  }
+  <span>{{ labels[displayed] }}</span>
+</div>
+<div
+  class="stars"
+  role="group"
+  [attr.aria-label]="'Важность: ' + label"
+  aria-description="Левые 30% звезды выбирают предыдущее значение. Стрелки меняют оценку; Home — 0, End — 5."
+  (pointerleave)="leave()"
+  (keydown)="keyboard($event)"
+>
+  @for (star of stars; track star) {
+    <button
+      type="button"
+      [disabled]="disabled"
+      [class.filled]="displayed >= star"
+      [class.targeted]="hoveredStar === star"
+      [class.outlined]="hoveredStar === star && displayed < star"
+      [attr.aria-label]="labels[star] + ': ' + star + ' из 5, ' + label"
+      [attr.aria-pressed]="value === star"
+      (pointerenter)="hover($event, star)"
+      (pointermove)="hover($event, star)"
+      (click)="commit($event, star)"
+    >
+      <span class="star-glyph" aria-hidden="true">★</span>
+    </button>
+  }
+</div>

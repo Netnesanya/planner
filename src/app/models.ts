@@ -72,7 +72,7 @@ export interface Preferences {
   view: string;
   showCompleted: boolean;
   sort: string;
-  mode?: "planner" | "cycles";
+  mode?: "planner" | "cycles" | "finance" | "goals";
 }
 export const LOCAL_USER = "local";
 export const COLORS = [

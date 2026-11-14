@@ -72,7 +72,7 @@
 .editor-field > select {
   width: 178px;
   font-size: calc(11px * var(--font-scale));
-  background: #252c35;
+  background-color: #252c35;
   border-color: #36404d;
   padding: 8px;
 }
@@ -312,4 +312,35 @@
       height: 12px;
     }
   }
+}
+
+@media (max-width: 760px) {
+  .task-editor {
+    width: 100%;
+    height: 100dvh;
+  }
+  .editor-header {
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .editor-scroll {
+    overscroll-behavior: contain;
+    scroll-padding-block: 24px;
+    padding-inline: 16px;
+  }
+  .editor-footer {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  .editor-field {
+    flex-wrap: wrap;
+    > input,
+    > select {
+      max-width: 100%;
+    }
+  }
+}
+
+.editor-field > select {
+  padding-right: var(--select-arrow-space);
 }
