@@ -433,3 +433,16 @@
     white-space: nowrap;
   }
 }
+
+.calendar-all-day .drop-active {
+  background: var(--mint-dark);
+  outline: 1px dashed var(--mint);
+  outline-offset: -2px;
+}
+.all-day-preview {
+  display: block;
+  padding: 6px;
+  font-size: 0.8rem;
+  color: var(--mint);
+  pointer-events: none;
+}

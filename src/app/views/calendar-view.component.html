@@ -90,7 +90,26 @@
     <div class="calendar-all-day" [style.--days]="calendarDays.length">
       <span>Без времени</span>
       @for (date of calendarDays; track date) {
-        <div (dragover)="allowDrop($event)" (drop)="dropAllDay($event, date)">
+        <div
+          [attr.data-all-day-date]="date"
+          [class.drop-active]="
+            moving()?.active &&
+            moving()?.valid &&
+            moving()?.allDay &&
+            moving()?.date === date
+          "
+          (dragover)="allowDrop($event)"
+          (drop)="dropAllDay($event, date)"
+        >
+          @if (moving(); as move) {
+            @if (
+              move.active && move.valid && move.allDay && move.date === date
+            ) {
+              <span class="all-day-preview"
+                >{{ move.task.title }} · Без времени</span
+              >
+            }
+          }
           @for (task of dateTasks(date, false); track task.id) {
             <button
               class="all-day-task"
@@ -187,7 +206,9 @@
               </div>
             }
             @if (moving(); as move) {
-              @if (move.active && move.date === date) {
+              @if (
+                move.active && move.valid && !move.allDay && move.date === date
+              ) {
                 <div
                   class="move-preview"
                   [style.top.px]="(move.minute / 60) * 64"

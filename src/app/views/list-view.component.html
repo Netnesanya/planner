@@ -20,7 +20,7 @@
           ><button
             class="icon-button"
             [attr.aria-label]="'Добавить задачу: ' + group.name"
-            (click)="openTask(undefined, group.tasks[0].due_date || today)"
+            (click)="openTask(undefined, group.tasks[0].due_date)"
           >
             <app-icon name="plus" />
           </button>
@@ -41,7 +41,7 @@
         }
       </section>
     }
-    @if (!pending.length) {
+    @if (!pending.length && !completed.length) {
       <div class="empty-state">
         <span class="empty-icon"><app-icon name="leaf" /></span>
         <h3>{{ search ? "Ничего не нашлось" : "Можно выдохнуть" }}</h3>

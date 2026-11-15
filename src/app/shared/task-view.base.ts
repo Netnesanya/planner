@@ -11,7 +11,7 @@ import {
 } from "../models";
 export interface TaskOpenRequest {
   task?: Task;
-  due?: string;
+  due?: string | null;
   time?: string;
   status?: Status;
   listId?: string;
@@ -55,7 +55,7 @@ export abstract class TaskViewBase {
   listById(id: string) {
     return this.store.lists().find((l) => l.id === id);
   }
-  openTask(task?: Task, due?: string, time?: string, status?: Status) {
+  openTask(task?: Task, due?: string | null, time?: string, status?: Status) {
     this.open.emit({ task, due, time, status });
   }
   async toggle(task: Task) {

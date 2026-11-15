@@ -1,4 +1,4 @@
-import { Component, HostListener, inject } from "@angular/core";
+import { Component, HostListener, inject, ViewChild } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { PlannerService } from "./planner.service";
 import { FocusService } from "./focus.service";
@@ -51,6 +51,7 @@ type View = "list" | "kanban" | "calendar" | "timeline";
   styleUrl: "./app.component.scss",
 })
 export class AppComponent {
+  @ViewChild(TaskEditorComponent) taskEditor?: TaskEditorComponent;
   readonly store = inject(PlannerService);
   readonly focus = inject(FocusService);
   view: View = (["list", "kanban", "calendar", "timeline"].includes(
@@ -156,12 +157,21 @@ export class AppComponent {
   }
   get filteredTasks() {
     const q = this.search.trim().toLowerCase();
+    const goalNames = new Map(
+      this.store
+        .tasks()
+        .filter((t) => t.is_milestone)
+        .map((t) => [t.id, t.title]),
+    );
     return this.store
       .tasks()
       .filter((t) => {
         if (
           q &&
-          ![t.title, t.notes, ...t.tags].join(" ").toLowerCase().includes(q)
+          ![t.title, t.notes, ...t.tags, goalNames.get(t.goal_id || "") || ""]
+            .join(" ")
+            .toLowerCase()
+            .includes(q)
         )
           return false;
         if (
@@ -282,7 +292,7 @@ export class AppComponent {
       (!this.store.cloud() || list.owner_id === this.store.user()?.id)
     );
   }
-  openTask(task?: Task, due?: string, time?: string) {
+  openTask(task?: Task, due?: string | null, time?: string) {
     this.pendingCycleId = null;
     if (this.store.loading()) return;
     if (!this.store.lists().length) {
@@ -384,11 +394,14 @@ export class AppComponent {
   focusDialog() {
     setTimeout(
       () =>
-        document
-          .querySelector<HTMLElement>(
-            '[role="dialog"] input, [role="dialog"] button',
+        (
+          document.querySelector<HTMLElement>(
+            '[role="dialog"] input:not([disabled])',
+          ) ||
+          document.querySelector<HTMLElement>(
+            '[role="dialog"] button:not([disabled])',
           )
-          ?.focus(),
+        )?.focus(),
       10,
     );
   }
@@ -400,21 +413,48 @@ export class AppComponent {
     this.returnFocus?.focus();
   }
   @HostListener("document:keydown", ["$event"]) keyboard(event: KeyboardEvent) {
+    if (event.defaultPrevented) return;
     if (event.key === "Escape") {
-      this.closeOverlays();
+      if (this.taskEditor) {
+        event.preventDefault();
+        this.taskEditor.escape();
+      } else if (this.confirm) {
+        event.preventDefault();
+        this.confirm = null;
+        this.focusDialog();
+      } else if (this.modal) {
+        event.preventDefault();
+        this.closeOverlays();
+      }
       this.mobileNav = false;
+      return;
+    }
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      event.key === "Enter" &&
+      this.taskEditor
+    ) {
+      event.preventDefault();
+      this.taskEditor.submit();
       return;
     }
     if (event.key === "Tab" && (this.editor || this.modal || this.confirm)) {
       const dialogs = document.querySelectorAll<HTMLElement>('[role="dialog"]');
       const dialog = dialogs[dialogs.length - 1];
-      const nodes = dialog?.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), textarea, select, [tabindex="0"]',
+      const nodes = Array.from(
+        dialog?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]',
+        ) || [],
+      ).filter(
+        (node) => node.getClientRects().length && !node.closest("[inert]"),
       );
       if (nodes?.length) {
         const first = nodes[0],
           last = nodes[nodes.length - 1];
-        if (event.shiftKey && document.activeElement === first) {
+        if (!dialog?.contains(document.activeElement)) {
+          event.preventDefault();
+          (event.shiftKey ? last : first).focus();
+        } else if (event.shiftKey && document.activeElement === first) {
           event.preventDefault();
           last.focus();
         } else if (!event.shiftKey && document.activeElement === last) {
@@ -426,7 +466,13 @@ export class AppComponent {
     const typing = ["INPUT", "TEXTAREA", "SELECT"].includes(
       (event.target as HTMLElement)?.tagName,
     );
-    if ((event.ctrlKey || event.metaKey) && event.key === "k") {
+    if (
+      (event.ctrlKey || event.metaKey) &&
+      event.key === "k" &&
+      !this.editor &&
+      !this.modal &&
+      !this.confirm
+    ) {
       event.preventDefault();
       document.querySelector<HTMLInputElement>("#global-search")?.focus();
     }

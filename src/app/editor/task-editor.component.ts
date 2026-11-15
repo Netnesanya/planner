@@ -1,5 +1,7 @@
 import {
   Component,
+  ElementRef,
+  HostListener,
   EventEmitter,
   inject,
   Input,
@@ -14,6 +16,7 @@ import { PlannerService } from "../planner.service";
 import {
   COLORS,
   dateKey,
+  addDays,
   parseDate,
   REPEAT_LABELS,
   Recurrence,
@@ -34,6 +37,86 @@ import {
 })
 export class TaskEditorComponent implements OnInit {
   readonly store = inject(PlannerService);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
+  private initial = "";
+  private backgroundDown = false;
+  confirmDiscard = false;
+  saveError = "";
+  get dirty() {
+    return (
+      this.snapshot() !== this.initial ||
+      !!this.subtaskInput.trim() ||
+      !this.durationValid
+    );
+  }
+  private snapshot() {
+    return JSON.stringify({ task: this.task, tags: this.tagInput });
+  }
+  saveFromConfirmation() {
+    this.confirmDiscard = false;
+    setTimeout(() => this.submit());
+  }
+  submit() {
+    if (this.confirmDelete || this.store.busy()) return;
+    if (this.confirmDiscard) {
+      this.saveFromConfirmation();
+      return;
+    }
+    this.host.nativeElement
+      .querySelector<HTMLFormElement>("form")
+      ?.requestSubmit();
+  }
+  setDate(value: "today" | "tomorrow" | "none") {
+    this.task.due_date =
+      value === "none"
+        ? null
+        : addDays(dateKey(), value === "tomorrow" ? 1 : 0);
+    if (!this.task.due_date) {
+      this.task.start_time = null;
+      this.task.recurrence = "none";
+    }
+  }
+  @HostListener("window:beforeunload", ["$event"]) beforeUnload(
+    event: BeforeUnloadEvent,
+  ) {
+    if (this.dirty) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  }
+  backdropStart(event: PointerEvent) {
+    this.backgroundDown = event.target === event.currentTarget;
+  }
+  backdropClick(event: MouseEvent) {
+    if (this.backgroundDown && event.target === event.currentTarget)
+      this.closeOverlays();
+    this.backgroundDown = false;
+  }
+  private focus(selector: string) {
+    setTimeout(() =>
+      this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus(),
+    );
+  }
+  escape() {
+    if (this.store.busy()) return;
+    if (this.confirmDelete) {
+      this.confirmDelete = false;
+      this.focus('[aria-label="Удалить задачу"]');
+    } else if (this.confirmDiscard) this.keepEditing();
+    else this.closeOverlays();
+  }
+  askDelete() {
+    this.confirmDelete = true;
+    this.focus(".delete-confirm .outline-button");
+  }
+  keepEditing() {
+    this.confirmDiscard = false;
+    this.focus(".task-title-input");
+  }
+  discard() {
+    if (!this.store.busy()) this.closed.emit();
+  }
+
   @Input({ required: true }) task!: Task;
   @Output() saved = new EventEmitter<Task>();
   @Output() closed = new EventEmitter<void>();
@@ -76,6 +159,7 @@ export class TaskEditorComponent implements OnInit {
     this.task.progress_unit ??= "";
     this.originalDate = this.task.due_date;
     this.tagInput = this.task.tags.join(", ");
+    this.initial = this.snapshot();
   }
   dateLabel(date: string) {
     return parseDate(date).toLocaleDateString("ru-RU", {
@@ -87,21 +171,26 @@ export class TaskEditorComponent implements OnInit {
     return this.dateLabel(dateKey(new Date(timestamp)));
   }
   async saveEditor() {
+    if (this.store.busy()) return;
+    this.saveError = "";
+    if (!this.task.title.trim()) {
+      this.saveError = "Введите название задачи.";
+      return;
+    }
     if (!validProgress(this.task)) {
-      this.store.error.set(
-        "Укажите корректный прогресс: сделано ≥ 0, цель > 0.",
-      );
+      this.saveError = "Укажите корректный прогресс: сделано ≥ 0, цель > 0.";
       return;
     }
     const duration = this.task.duration;
     if (!this.task.is_milestone && !this.durationValid) {
-      this.store.error.set(
-        "Длительность: от 5 минут до 24 часов. Например, 1ч 30м.",
-      );
+      this.saveError =
+        "Длительность: от 5 минут до 24 часов. Например, 1ч 30м.";
       return;
     }
+    this.addSubtask();
     const draft = {
       ...this.task,
+      title: this.task.title.trim(),
       duration,
       start_time: this.task.is_milestone ? null : this.task.start_time,
       tags: [
@@ -134,6 +223,11 @@ export class TaskEditorComponent implements OnInit {
     if (await this.store.saveTask(draft)) {
       this.saved.emit(draft);
       this.closed.emit();
+    } else {
+      this.saveError =
+        this.store.error() ||
+        "Не удалось сохранить. Ваши изменения остались в редакторе.";
+      this.confirmDiscard = false;
     }
   }
   addSubtask() {
@@ -158,6 +252,12 @@ export class TaskEditorComponent implements OnInit {
     if (await this.store.deleteTask(this.task)) this.closed.emit();
   }
   closeOverlays() {
-    this.closed.emit();
+    if (this.store.busy()) return;
+    if (!this.dirty) {
+      this.closed.emit();
+      return;
+    }
+    this.confirmDiscard = true;
+    this.focus(".discard-confirm .keep-editing");
   }
 }

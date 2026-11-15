@@ -43,6 +43,8 @@ export class CalendarViewComponent
     date: string;
     minute: number;
     active: boolean;
+    allDay: boolean;
+    valid: boolean;
   } | null>(null);
   private lastPointer: { x: number; y: number } | null = null;
   private scrollFrame = 0;
@@ -172,6 +174,8 @@ export class CalendarViewComponent
       date: task.due_date!,
       minute: h * 60 + m,
       active: false,
+      allDay: !task.start_time,
+      valid: true,
     });
   }
   private updateMove(x: number, y: number) {
@@ -181,6 +185,38 @@ export class CalendarViewComponent
       state.active || Math.hypot(x - state.startX, y - state.startY) >= 5;
     if (!active) return;
     this.ignoreClick = true;
+    const allDay = Array.from(
+      this.host.nativeElement.querySelectorAll<HTMLElement>(
+        "[data-all-day-date]",
+      ),
+    ).find((el) => {
+      const rect = el.getBoundingClientRect();
+      return (
+        x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom
+      );
+    });
+    if (allDay) {
+      this.moving.set({
+        ...state,
+        active,
+        allDay: true,
+        valid: true,
+        date: allDay.dataset["allDayDate"]!,
+      });
+      return;
+    }
+    const visible = this.host.nativeElement
+      .querySelector<HTMLElement>(".calendar-scroll")!
+      .getBoundingClientRect();
+    if (
+      y < visible.top ||
+      y > visible.bottom ||
+      x < visible.left ||
+      x > visible.right
+    ) {
+      this.moving.set({ ...state, active, valid: false });
+      return;
+    }
     const columns = Array.from(
       this.host.nativeElement.querySelectorAll<HTMLElement>(
         ".calendar-day-column",
@@ -190,7 +226,10 @@ export class CalendarViewComponent
       const rect = el.getBoundingClientRect();
       return x >= rect.left && x <= rect.right;
     });
-    if (!column) return;
+    if (!column) {
+      this.moving.set({ ...state, active, valid: false });
+      return;
+    }
     const index = columns.indexOf(column);
     // Convert the card's top edge, including grab offset, to local calendar minutes.
     const raw =
@@ -207,6 +246,8 @@ export class CalendarViewComponent
       active,
       date: this.calendarDays[index],
       minute,
+      allDay: false,
+      valid: true,
     });
   }
   private autoScroll = () => {
@@ -216,7 +257,18 @@ export class CalendarViewComponent
     if (scroller && this.lastPointer) {
       const rect = scroller.getBoundingClientRect();
       const y = this.lastPointer.y;
-      const delta = y < rect.top + 40 ? -8 : y > rect.bottom - 40 ? 8 : 0;
+      const inside =
+        this.lastPointer.x >= rect.left &&
+        this.lastPointer.x <= rect.right &&
+        y >= rect.top &&
+        y <= rect.bottom;
+      const delta = inside
+        ? y < rect.top + 40
+          ? -8
+          : y > rect.bottom - 40
+            ? 8
+            : 0
+        : 0;
       if (delta) {
         scroller.scrollTop += delta;
         if (this.moving()) this.updateMove(this.lastPointer.x, y);
@@ -277,11 +329,16 @@ export class CalendarViewComponent
     this.moving.set(null);
     if (moving?.active) {
       const latest = this.store.tasks().find((t) => t.id === moving.task.id);
-      if (latest)
+      const start = moving.allDay ? null : this.timeLabel(moving.minute);
+      if (
+        latest &&
+        moving.valid &&
+        (latest.due_date !== moving.date || latest.start_time !== start)
+      )
         await this.store.saveTask({
           ...latest,
           due_date: moving.date,
-          start_time: this.timeLabel(moving.minute),
+          start_time: start,
           repeat_anchor: Number(moving.date.slice(8)),
         });
       setTimeout(() => (this.ignoreClick = false), 0);
@@ -306,12 +363,14 @@ export class CalendarViewComponent
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
       event.stopPropagation();
-      void this.store.saveTask({
-        ...task,
+      const [hour, minute] = (task.start_time || "00:00")
+        .split(":")
+        .map(Number);
+      void this.store.patchTask(task.id, {
         duration: Math.max(
           5,
           Math.min(
-            1440,
+            1440 - hour * 60 - minute,
             task.duration + (event.key === "ArrowDown" ? 15 : -15),
           ),
         ),

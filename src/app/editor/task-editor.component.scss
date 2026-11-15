@@ -344,3 +344,44 @@
 .editor-field > select {
   padding-right: var(--select-arrow-space);
 }
+
+.editor-fields {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.editor-error {
+  margin: 0;
+  padding: 12px 20px;
+  color: #ffb4b4;
+  background: #48262a;
+  line-height: 1.5;
+}
+.date-shortcuts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+}
+.date-shortcuts button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 12px;
+  color: var(--muted);
+  min-height: 36px;
+}
+.date-shortcuts button:hover {
+  color: var(--mint);
+  border-color: var(--mint);
+}
+.discard-actions {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+@media (max-width: 480px) {
+  .discard-actions button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
