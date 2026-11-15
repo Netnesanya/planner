@@ -12,6 +12,7 @@ import { FormsModule } from "@angular/forms";
 import { IconComponent } from "../icon.component";
 import { PriorityStarsComponent } from "../shared/priority-stars.component";
 import { DurationPickerComponent } from "../shared/duration-picker.component";
+import { RecurrenceScope } from "../recurrence-actions";
 import { PlannerService } from "../planner.service";
 import {
   COLORS,
@@ -140,6 +141,21 @@ export class TaskEditorComponent implements OnInit {
     if (!this.availableGoals.some((g) => g.id === this.task.goal_id))
       this.task.goal_id = null;
   }
+  scope: RecurrenceScope = "one";
+  originalTask?: Task;
+  get recurring() {
+    return !!this.originalTask?.series_id;
+  }
+  get canEditFuture() {
+    return (
+      (this.originalTask?.series_date || this.originalTask?.due_date || "") >=
+      dateKey()
+    );
+  }
+  async skip() {
+    if (this.originalTask && (await this.store.skipTask(this.originalTask)))
+      this.closed.emit();
+  }
   originalDate: string | null = null;
   tagInput = "";
   subtaskInput = "";
@@ -159,6 +175,7 @@ export class TaskEditorComponent implements OnInit {
     this.task.progress_unit ??= "";
     this.originalDate = this.task.due_date;
     this.tagInput = this.task.tags.join(", ");
+    this.originalTask = this.store.tasks().find((t) => t.id === this.task.id);
     this.initial = this.snapshot();
   }
   dateLabel(date: string) {
@@ -220,7 +237,9 @@ export class TaskEditorComponent implements OnInit {
       draft.start_time = null;
     }
     if (!draft.start_time) draft.start_time = null;
-    if (await this.store.saveTask(draft)) {
+    if (
+      await this.store.saveTask(draft, this.recurring ? this.scope : undefined)
+    ) {
       this.saved.emit(draft);
       this.closed.emit();
     } else {

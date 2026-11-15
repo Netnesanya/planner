@@ -846,3 +846,7 @@
     </button>
   </div>
 }
+
+@if (!editor && !modal && !confirm) {
+  <app-task-undo />
+}

@@ -47,7 +47,7 @@ export function expandRecurrences(
       tasks.filter((t) => t.series_id === root.id).map((t) => t.series_date),
     );
     const origin = root.series_date || root.due_date;
-    const anchor = Number(origin.slice(8));
+    const anchor = root.repeat_anchor || Number(origin.slice(8));
     let due = nextDate(origin, root.recurrence, anchor);
     // Bound traversal of imported historical plans, then generate at most 84 days.
     let steps = 0;

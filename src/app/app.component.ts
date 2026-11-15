@@ -26,12 +26,14 @@ import { TaskEditorComponent } from "./editor/task-editor.component";
 import { CalendarTransferComponent } from "./integrations/calendar-transfer.component";
 import { FinanceViewComponent } from "./finance/finance-view.component";
 import { GoalsViewComponent } from "./goals/goals-view.component";
+import { TaskUndoComponent } from "./shared/task-undo.component";
 type View = "list" | "kanban" | "calendar" | "timeline";
 @Component({
   selector: "app-root",
   standalone: true,
   imports: [
     FormsModule,
+    TaskUndoComponent,
     IconComponent,
     ListViewComponent,
     KanbanViewComponent,

@@ -24,6 +24,7 @@ for (const installation of ["migrations", "bundle"])
             "migrations/005_long_goals.sql",
             "migrations/006_calendar_import.sql",
             "migrations/007_calendar_subscriptions.sql",
+            "migrations/008_task_undo.sql",
           ];
     for (const file of sqlFiles)
       await db.exec(
@@ -727,6 +728,50 @@ for (const installation of ["migrations", "bundle"])
           ])
         ).rows[0].calendar_revision;
         assert.ok(Number(after) > Number(old));
+      },
+    );
+    await t.test(
+      "undo is atomic, conflict-aware and respects private task access",
+      async () => {
+        await as(alice);
+        const created = normalizeTask({
+          ...makeTask(personal, alice, "2026-11-15"),
+          title: "Undo test",
+        });
+        await db.query("select apply_task_changes($1::jsonb)", [
+          JSON.stringify([created]),
+        ]);
+        const read = async () =>
+          (
+            await db.query(
+              "select to_jsonb(t) as task from tasks t where id=$1",
+              [created.id],
+            )
+          ).rows[0]?.task as any;
+        const before = await read();
+        await db.query("update tasks set title='Changed' where id=$1", [
+          created.id,
+        ]);
+        const after = await read();
+        const changes = [{ id: created.id, before, after }];
+        const undo = () =>
+          db.query("select undo_task_changes($1::jsonb)", [
+            JSON.stringify(changes),
+          ]);
+        await as(bob);
+        await assert.rejects(undo(), /changed|denied/);
+        await as(alice);
+        await undo();
+        assert.equal((await read()).title, "Undo test");
+        await assert.rejects(undo(), /changed/);
+        const restored = await read();
+        await db.query("delete from tasks where id=$1", [created.id]);
+        await db.query("select undo_task_changes($1::jsonb)", [
+          JSON.stringify([{ id: created.id, before: restored, after: null }]),
+        ]);
+        assert.equal((await read()).title, "Undo test");
+        await db.exec("reset role;set role anon");
+        await assert.rejects(undo(), /permission denied/);
       },
     );
     await db.close();

@@ -232,9 +232,11 @@ try {
   const completed = (await data()).tasks.find((t) => t.id === task.id);
   expect(completed.status).toBe("done");
   const next = (await data()).tasks
-    .filter((t) => t.series_id === task.id && t.id !== task.id)
+    .filter((t) => t.title === task.title && t.series_id && t.id !== task.id)
     .sort((a, b) => a.due_date.localeCompare(b.due_date));
   expect(next.length).toBeGreaterThanOrEqual(82);
+  expect(next.some((t) => t.id === t.series_id)).toBe(true);
+  expect(completed.series_id).toBeNull();
   expect(next[0].progress_value).toBe(0);
   expect(next[0].progress_target).toBe(5000);
   expect(completed.progress_value).toBe(4250);

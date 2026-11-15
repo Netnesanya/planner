@@ -202,6 +202,38 @@
               />
             </div>
           }
+          @if (recurring) {
+            <section
+              class="recurrence-scope"
+              aria-label="Область изменения повторения"
+            >
+              <span>Применить изменения</span>
+              <label
+                ><input
+                  type="radio"
+                  name="recurrenceScope"
+                  value="one"
+                  [(ngModel)]="scope"
+                />Только эта задача</label
+              >
+              <label
+                ><input
+                  type="radio"
+                  name="recurrenceScope"
+                  value="future"
+                  [(ngModel)]="scope"
+                  [disabled]="!canEditFuture"
+                />Эта и будущие</label
+              >
+              <p class="field-help">
+                Будущие выполненные и отдельно изменённые задачи сохраняются.
+                Прогресс относится только к выбранной задаче.
+              </p>
+              <button type="button" class="outline-button" (click)="skip()">
+                Пропустить это повторение
+              </button>
+            </section>
+          }
           <label class="editor-field"
             ><span><app-icon name="flag" />Приоритет</span
             ><app-priority-stars [(value)]="task.priority" /></label
@@ -210,7 +242,7 @@
             ><select
               name="recurrence"
               [(ngModel)]="task.recurrence"
-              [disabled]="!!task.is_milestone"
+              [disabled]="!!task.is_milestone || (recurring && scope === 'one')"
             >
               @for (repeat of repeatOptions; track repeat[0]) {
                 <option [value]="repeat[0]">{{ repeat[1] }}</option>
@@ -220,9 +252,9 @@
           @if (task.recurrence !== "none") {
             <p class="field-help">
               Повторения появятся в календаре на 12 недель вперёд, даже без
-              времени начала. Изменение правила повторения перестраивает будущие
-              неизменённые экземпляры; выполненные и отдельно отредактированные
-              сохраняются.
+              времени начала. Для изменения правила выберите «Эта и будущие».
+              Изменение правила перестраивает будущие неизменённые экземпляры;
+              выполненные и отдельно отредактированные сохраняются.
             </p>
           }
           <section class="progress-settings">

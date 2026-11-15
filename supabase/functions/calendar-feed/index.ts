@@ -56,7 +56,7 @@ function expandRecurrences(input, today = dateKey(), owner = "local", limits = {
       tasks.filter((t) => t.series_id === root.id).map((t) => t.series_date)
     );
     const origin = root.series_date || root.due_date;
-    const anchor = Number(origin.slice(8));
+    const anchor = root.repeat_anchor || Number(origin.slice(8));
     let due = nextDate(origin, root.recurrence, anchor);
     let steps = 0;
     while (due <= end && steps++ < 1e5) {

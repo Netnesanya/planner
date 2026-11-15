@@ -10,7 +10,7 @@
     "build": "ng build",
     "db:bundle": "node scripts/bundle-migrations.mjs",
     "test": "tsx --test tests/*.test.ts",
-    "test:e2e": "node tests/browser.mjs && node tests/calendar-browser.mjs && node tests/calendar-subscriptions-browser.mjs && node tests/planner-usability-browser.mjs",
+    "test:e2e": "node tests/browser.mjs && node tests/calendar-browser.mjs && node tests/calendar-subscriptions-browser.mjs && node tests/planner-usability-browser.mjs && node tests/task-actions-browser.mjs",
     "preview": "node scripts/preview.mjs",
     "format": "prettier --write \"src/**/*.{ts,html,scss}\" \"tests/*.{ts,mjs}\" \"scripts/*.mjs\"",
     "test:finance": "node tests/finance-browser.mjs",
