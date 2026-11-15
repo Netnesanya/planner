@@ -25,6 +25,7 @@ import { TaskProgressComponent } from "./shared/task-progress.component";
   styleUrl: "./task-card.component.scss",
 })
 export class TaskCardComponent {
+  @Input() showProgress = true;
   readonly store = inject(PlannerService);
   get linkedGoal() {
     return this.store

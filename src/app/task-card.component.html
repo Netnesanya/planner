@@ -67,7 +67,7 @@
         }}</span>
       }
     </div>
-    @if (task.progress_mode && task.progress_mode !== "none") {
+    @if (showProgress && task.progress_mode && task.progress_mode !== "none") {
       <app-task-progress
         [task]="task"
         [disabled]="disabled"

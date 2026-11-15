@@ -5,7 +5,7 @@ import { makeTask } from "../src/app/models";
 import { saveRecurringTask, normalizeTask } from "../src/app/recurrence";
 import { PGlite } from "@electric-sql/pglite";
 
-for (const installation of ["migrations", "bundle"])
+for (const installation of ["migrations", "bundle", "upgrade"])
   test(`Supabase ${installation}: real PostgreSQL RLS, sharing, repeat transactions and revocation`, async (t) => {
     const db = new PGlite();
     await db.exec(`create role anon nologin; create role authenticated nologin; create role service_role nologin;
@@ -24,7 +24,12 @@ for (const installation of ["migrations", "bundle"])
             "migrations/005_long_goals.sql",
             "migrations/006_calendar_import.sql",
             "migrations/007_calendar_subscriptions.sql",
-            "migrations/008_task_undo.sql",
+            ...(installation === "upgrade"
+              ? ["update-planner.sql", "update-planner.sql"]
+              : [
+                  "migrations/008_task_undo.sql",
+                  "migrations/009_checked_task_writes.sql",
+                ]),
           ];
     for (const file of sqlFiles)
       await db.exec(
@@ -772,6 +777,78 @@ for (const installation of ["migrations", "bundle"])
         assert.equal((await read()).title, "Undo test");
         await db.exec("reset role;set role anon");
         await assert.rejects(undo(), /permission denied/);
+      },
+    );
+    await t.test(
+      "checked writes reject stale batches without changing other tasks",
+      async () => {
+        await as(alice);
+        const created = normalizeTask({
+          ...makeTask(personal, alice, "2026-11-15"),
+          title: "Checked write",
+        });
+        await db.query("select apply_task_changes_checked($1::jsonb)", [
+          JSON.stringify([{ id: created.id, before: null, after: created }]),
+        ]);
+        const read = async () =>
+          (
+            await db.query(
+              "select to_jsonb(t) as task from tasks t where id=$1",
+              [created.id],
+            )
+          ).rows[0]?.task as any;
+        const original = await read();
+        await db.query("update tasks set title='Remote change' where id=$1", [
+          created.id,
+        ]);
+        const second = normalizeTask({
+          ...makeTask(personal, alice, "2026-11-15"),
+          title: "Must not be inserted",
+        });
+        const batch = [
+          { id: second.id, before: null, after: second },
+          {
+            id: created.id,
+            before: original,
+            after: { ...original, title: "Stale draft" },
+          },
+        ];
+        await assert.rejects(
+          db.query("select apply_task_changes_checked($1::jsonb)", [
+            JSON.stringify(batch),
+          ]),
+          /changed/,
+        );
+        assert.equal((await read()).title, "Remote change");
+        assert.equal(
+          (await db.query("select id from tasks where id=$1", [second.id])).rows
+            .length,
+          0,
+        );
+        const fresh = await read();
+        await db.query("select apply_task_changes_checked($1::jsonb)", [
+          JSON.stringify([
+            {
+              id: created.id,
+              before: fresh,
+              after: { ...fresh, title: "Fresh draft" },
+            },
+          ]),
+        ]);
+        assert.equal((await read()).title, "Fresh draft");
+        await as(bob);
+        await assert.rejects(
+          db.query("select apply_task_changes_checked($1::jsonb)", [
+            JSON.stringify([
+              {
+                id: created.id,
+                before: fresh,
+                after: { ...fresh, title: "Denied" },
+              },
+            ]),
+          ]),
+          /changed|denied/,
+        );
       },
     );
     await db.close();

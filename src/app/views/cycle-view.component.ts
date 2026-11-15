@@ -1,3 +1,4 @@
+import { GoalWeekComponent } from "./goal-week.component";
 import { Component } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { TaskViewBase, TaskOpenRequest } from "../shared/task-view.base";
@@ -19,6 +20,7 @@ import {
   standalone: true,
   imports: [
     FormsModule,
+    GoalWeekComponent,
     TaskCardComponent,
     TimelineViewComponent,
     DurationPickerComponent,
@@ -277,6 +279,14 @@ export class CycleViewComponent extends TaskViewBase {
       })
     )
       this.store.notice.set("Итоги недели сохранены.");
+  }
+  addGoalAction(goal: Task) {
+    this.open.emit({
+      goalId: goal.id,
+      listId: goal.list_id,
+      due: this.score.from,
+      cycleId: this.cycle!.id,
+    });
   }
   goalTitle(task: Task) {
     return this.goals.find((g) => g.id === task.goal_id)?.title;

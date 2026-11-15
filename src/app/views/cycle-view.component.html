@@ -199,15 +199,25 @@
     }
     <div class="goal-cards">
       @for (goal of goals; track goal.id) {
-        <app-task-card
-          [task]="goal"
-          [list]="listById(goal.list_id)"
-          [board]="true"
-          [disabled]="store.busy()"
-          (edit)="openTask($event)"
-          (toggle)="toggle($event)"
-          (taskChange)="store.patchTask($event.id, $event.patch)"
-        />
+        <div class="goal-with-week">
+          <app-task-card
+            [task]="goal"
+            [showProgress]="false"
+            [list]="listById(goal.list_id)"
+            [board]="true"
+            [disabled]="store.busy()"
+            (edit)="openTask($event)"
+            (toggle)="toggle($event)"
+            (taskChange)="store.patchTask($event.id, $event.patch)"
+          /><app-goal-week
+            [goal]="goal"
+            [tasks]="store.tasks()"
+            [from]="score.from"
+            [to]="score.to"
+            (edit)="openTask($event)"
+            (add)="addGoalAction(goal)"
+          />
+        </div>
       } @empty {
         <div class="goal-empty">
           ◆ Начните с результата: например, «Пожать свой вес к 1 января». Затем

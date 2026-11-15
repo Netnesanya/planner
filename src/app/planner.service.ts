@@ -22,6 +22,7 @@ import {
   recurrenceDelta,
   normalizeTask,
 } from "./recurrence";
+import { BulkPatch, bulkTask } from "./planner-workflows";
 import { taskChanges, reverseTaskChanges, TaskUndo } from "./task-history";
 import {
   RecurrenceScope,
@@ -53,6 +54,26 @@ export class PlannerService {
   readonly undoEntry = signal<TaskUndo | null>(null);
   readonly configured = signal(false);
   readonly online = signal(navigator.onLine);
+  readonly syncState = signal<
+    "idle" | "saving" | "saved" | "error" | "load-error"
+  >("idle");
+  readonly syncRefreshing = signal(false);
+  readonly checkedWrites = signal(false);
+  readonly lastSaved = signal<Date | null>(null);
+  readonly canRetry = signal(false);
+  private retryAction: (() => Promise<boolean>) | null = null;
+  dismissRetry() {
+    this.retryAction = null;
+    this.canRetry.set(false);
+    if (this.syncState() === "error") {
+      this.syncState.set("idle");
+      this.error.set("");
+    }
+  }
+  async retrySave() {
+    return this.retryAction ? this.retryAction() : false;
+  }
+
   readonly preferences = signal<Preferences>({
     view: "list",
     showCompleted: true,
@@ -142,13 +163,35 @@ export class PlannerService {
   }
   private async run(action: () => Promise<void>) {
     if (this.busy() || this.loading()) return false;
+    const account = this.user()?.id || LOCAL_USER;
     this.busy.set(true);
+    this.syncState.set("saving");
     this.error.set("");
     this.revision++;
     try {
+      if (this.cloud() && !this.online())
+        throw new Error(
+          "Нет сети. Изменения не отправлены. Подключитесь и повторите сохранение.",
+        );
       await action();
+      if (account === (this.user()?.id || LOCAL_USER)) {
+        this.syncState.set("saved");
+        this.lastSaved.set(new Date());
+        this.canRetry.set(false);
+        this.retryAction = null;
+      }
       return true;
     } catch (e) {
+      if (account === (this.user()?.id || LOCAL_USER)) {
+        this.syncState.set("error");
+        this.canRetry.set(true);
+        this.retryAction = () =>
+          this.run(async () => {
+            if (account !== (this.user()?.id || LOCAL_USER))
+              throw new Error("Аккаунт изменился.");
+            await action();
+          });
+      }
       this.error.set(
         e && typeof e === "object" && "message" in e
           ? String(e.message)
@@ -209,6 +252,10 @@ export class PlannerService {
         this.user.set(session?.user || null);
         if (previous !== session?.user?.id) {
           this.undoEntry.set(null);
+          this.retryAction = null;
+          this.canRetry.set(false);
+          this.syncState.set("idle");
+          this.checkedWrites.set(false);
           this.revision++;
           this.loadId++;
           if (session?.user) {
@@ -236,6 +283,11 @@ export class PlannerService {
     const userId = this.user()?.id;
     if (!userId) return;
     try {
+      const capabilities = await this.client!.rpc("planner_capabilities");
+      if (this.user()?.id !== userId) return;
+      this.checkedWrites.set(
+        !capabilities.error && capabilities.data?.checked_task_writes === true,
+      );
       await this.refresh(true);
       if (this.user()?.id !== userId) return;
       const { data } = await this.client!.from("preferences")
@@ -294,6 +346,7 @@ export class PlannerService {
     }
     if (!this.client || this.refreshing || (!initial && this.busy())) return;
     this.refreshing = true;
+    this.syncRefreshing.set(true);
     const userId = this.user()!.id,
       revision = this.revision,
       loadId = ++this.loadId;
@@ -324,13 +377,19 @@ export class PlannerService {
         start_time: t.start_time?.slice(0, 5) || null,
       }));
       this.tasks.set(loaded);
+      if (this.syncState() === "load-error") {
+        this.syncState.set("idle");
+        this.error.set("");
+      }
       const expanded = expandRecurrences(loaded, dateKey(), userId);
       if (recurrenceDelta(loaded, expanded).saved.length)
         await this.commitTasks(expanded);
     } catch (e) {
+      if (this.syncState() !== "error") this.syncState.set("load-error");
       this.error.set((e as Error).message);
     } finally {
       this.refreshing = false;
+      this.syncRefreshing.set(false);
     }
   }
   async authenticate(email: string, password: string, register: boolean) {
@@ -359,7 +418,7 @@ export class PlannerService {
       this.loadLocal();
     });
   }
-  async saveTask(task: Task, scope?: RecurrenceScope) {
+  async saveTask(task: Task, scope?: RecurrenceScope, expected?: Task) {
     const original = this.tasks().find((t) => t.id === task.id);
     if (
       !scope &&
@@ -367,7 +426,18 @@ export class PlannerService {
       original.recurrence === task.recurrence
     )
       scope = "one";
+    const snapshot = expected || original;
     return this.run(async () => {
+      if (
+        snapshot &&
+        taskChanges(
+          [snapshot],
+          this.tasks().filter((t) => t.id === snapshot.id),
+        ).length
+      )
+        throw new Error(
+          "Задача изменилась на другом устройстве. Черновик сохранён в редакторе; откройте актуальную задачу перед повторной правкой.",
+        );
       if (task.is_milestone && (task.goal_id || task.recurrence !== "none"))
         throw new Error("Цель не может повторяться или входить в другую цель.");
       if (
@@ -418,71 +488,128 @@ export class PlannerService {
       await this.commitUndoable(next, "Изменения задачи сохранены");
     });
   }
+  async bulkUpdate(selected: Task[], patch: BulkPatch) {
+    return this.run(async () => {
+      if (!selected.length || selected.length > 500)
+        throw new Error("Выберите от 1 до 500 задач.");
+      if (patch.list_id && !this.lists().some((l) => l.id === patch.list_id))
+        throw new Error("Список недоступен.");
+      const ids = new Set(selected.map((t) => t.id));
+      if (
+        taskChanges(
+          selected,
+          this.tasks().filter((t) => ids.has(t.id)),
+        ).length
+      )
+        throw new Error("Выбранные задачи изменились. Выделите их заново.");
+      let next = this.tasks();
+      for (const original of selected) {
+        const current = next.find((t) => t.id === original.id);
+        if (!current) throw new Error("Задача недоступна.");
+        const edited = bulkTask(current, patch);
+        if (Object.keys(patch).length === 1 && patch.status)
+          next = next.map((t) => (t.id === current.id ? edited : t));
+        else
+          next = saveWithScope(
+            next,
+            edited,
+            "one",
+            dateKey(),
+            this.user()?.id || LOCAL_USER,
+          );
+      }
+      await this.commitUndoable(next, `Изменено задач: ${selected.length}`);
+    });
+  }
   async patchTask(id: string, patch: TaskPatch["patch"]) {
     const current = this.tasks().find((task) => task.id === id);
     if (current) return this.saveTask({ ...current, ...patch });
     return false;
   }
   async setStatus(task: Task, status: Status) {
-    const account = this.user()?.id || LOCAL_USER;
-    const before = structuredClone(
-      this.tasks().filter((t) => t.id === task.id),
-    );
-    const success = await this.run(async () => {
-      if (this.cloud()) {
-        const { error } = await this.client!.rpc("set_task_status", {
-          task_id: task.id,
-          new_status: status,
-        });
-        if (error) throw error;
-      } else this.persist(transitionTask(this.tasks(), task.id, status));
-    });
-    if (success && this.cloud()) await this.refresh();
-    if (success && account === (this.user()?.id || LOCAL_USER))
-      this.remember(
-        before,
-        this.tasks().filter((t) => t.id === task.id),
+    const expected = this.tasks().find((t) => t.id === task.id);
+    return this.run(async () => {
+      if (
+        !expected ||
+        taskChanges(
+          [expected],
+          this.tasks().filter((t) => t.id === task.id),
+        ).length
+      )
+        throw new Error("Задача изменилась. Обновите данные.");
+      await this.commitUndoable(
+        transitionTask(this.tasks(), task.id, status),
         "Статус задачи изменён",
       );
-    return success;
+    });
   }
   async reorderTasks(ids: string[]) {
     const ranks = new Map(ids.map((id, index) => [id, index * 1024]));
     const success = await this.run(async () => {
-      if (this.cloud()) {
-        const { error } = await this.client!.rpc("reorder_tasks", {
-          task_ids: ids,
-        });
-        if (error) throw error;
-        this.tasks.update((tasks) =>
-          tasks.map((t) =>
-            ranks.has(t.id) ? { ...t, sort_order: ranks.get(t.id)! } : t,
-          ),
-        );
-      } else
-        this.persist(
-          this.tasks().map((t) =>
-            ranks.has(t.id) ? { ...t, sort_order: ranks.get(t.id)! } : t,
-          ),
-        );
+      if (ids.some((id) => !this.tasks().some((t) => t.id === id)))
+        throw new Error("Задачи изменились. Обновите список.");
+      await this.commitUndoable(
+        this.tasks().map((t) =>
+          ranks.has(t.id) ? { ...t, sort_order: ranks.get(t.id)! } : t,
+        ),
+        "Порядок задач изменён",
+      );
     });
     if (success) await this.savePreferences({ sort: "manual" });
     return success;
   }
+  private writeChanges(next: Task[]) {
+    const changes = taskChanges(this.tasks(), next);
+    const ids = new Set(changes.map((c) => c.id));
+    for (const change of [...changes]) {
+      const root = this.tasks().find((t) => t.id === change.after?.series_id);
+      if (root && !ids.has(root.id)) {
+        changes.push({ id: root.id, before: root, after: root });
+        ids.add(root.id);
+      }
+    }
+    return changes;
+  }
   private async commitTasks(next: Task[]) {
     if (!this.cloud()) {
-      this.persist(next);
+      const raw = localStorage.getItem(DATA_KEY);
+      if (raw) {
+        const current = validateData(JSON.parse(raw));
+        const changes = this.writeChanges(next);
+        this.persist(
+          reverseTaskChanges(
+            current.tasks,
+            changes.map((c) => ({ ...c, before: c.after, after: c.before })),
+          ),
+          current.lists,
+          current.cycles || [],
+        );
+      } else this.persist(next);
       return;
     }
     const delta = recurrenceDelta(this.tasks(), next);
     if (!delta.saved.length && !delta.deleted.length) return;
     const userId = this.user()?.id,
       revision = this.revision;
-    const { data, error } = await this.client!.rpc("apply_task_changes", {
-      task_rows: delta.saved.map(normalizeTask),
-      delete_ids: delta.deleted,
-    });
-    if (error) throw error;
+    const { data, error } = this.checkedWrites()
+      ? await this.client!.rpc("apply_task_changes_checked", {
+          changes: this.writeChanges(next).map((c) => ({
+            id: c.id,
+            before: c.before ? normalizeTask(c.before) : null,
+            after: c.after ? normalizeTask(c.after) : null,
+          })),
+        })
+      : await this.client!.rpc("apply_task_changes", {
+          task_rows: delta.saved.map(normalizeTask),
+          delete_ids: delta.deleted,
+        });
+    if (error) {
+      if (error.message?.includes("Task changed"))
+        throw new Error(
+          "Задача изменилась на другом устройстве. Обновите данные перед повторной правкой.",
+        );
+      throw error;
+    }
     if (this.user()?.id !== userId || this.revision !== revision) return;
     this.tasks.set(
       (data || []).map((t: Task) => ({
@@ -491,8 +618,17 @@ export class PlannerService {
       })),
     );
   }
-  async deleteTask(task: Task) {
+  async deleteTask(task: Task, expected?: Task) {
+    const snapshot = expected || this.tasks().find((t) => t.id === task.id);
     return this.run(async () => {
+      if (
+        !snapshot ||
+        taskChanges(
+          [snapshot],
+          this.tasks().filter((t) => t.id === task.id),
+        ).length
+      )
+        throw new Error("Задача изменилась. Обновите её перед удалением.");
       await this.commitUndoable(
         skipOccurrence(this.tasks(), task, this.user()?.id || LOCAL_USER),
         "Задача удалена",
@@ -522,6 +658,13 @@ export class PlannerService {
   }
   async skipTask(task: Task) {
     return this.run(async () => {
+      if (
+        taskChanges(
+          [task],
+          this.tasks().filter((t) => t.id === task.id),
+        ).length
+      )
+        throw new Error("Задача изменилась. Обновите её перед пропуском.");
       await this.commitUndoable(
         skipOccurrence(this.tasks(), task, this.user()?.id || LOCAL_USER),
         "Повторение пропущено",
@@ -545,7 +688,7 @@ export class PlannerService {
         if (error) {
           if (error.code === "PGRST202")
             throw new Error(
-              "Для отмены в облаке примените миграцию 008_task_undo.sql. Данные не изменены.",
+              "Для отмены в облаке примените единый update-planner.sql. Данные не изменены.",
             );
           throw error;
         }

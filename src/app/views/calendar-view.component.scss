@@ -446,3 +446,55 @@
   color: var(--mint);
   pointer-events: none;
 }
+
+.planning-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+  label {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  input {
+    width: 64px;
+    min-height: 40px;
+  }
+}
+.planning-layout {
+  display: grid;
+  gap: 16px;
+}
+.planning-layout.with-backlog {
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+.planning-grid {
+  min-width: 0;
+}
+.day-load {
+  color: var(--muted);
+  font-size: 0.75rem;
+  padding: 6px 0;
+}
+.overloaded,
+.load-conflict {
+  color: #edbb89;
+}
+.load-conflict {
+  font-size: 0.7rem;
+}
+@media (max-width: 1200px) {
+  .planning-layout.with-backlog {
+    grid-template-columns: 1fr;
+  }
+}
+
+.calendar-day-title {
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 3px;
+}

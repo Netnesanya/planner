@@ -22,6 +22,8 @@ jobs:
       - run: npm ci
       - run: npm run build:calendar-function
       - run: git diff --exit-code -- supabase/functions/calendar-feed/index.ts
+      - run: npm run db:bundle
+      - run: git diff --exit-code -- supabase/setup.sql supabase/update-planner.sql
       - run: npm test
       - name: Build with public Supabase configuration
         run: npm run build

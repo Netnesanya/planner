@@ -1,3 +1,19 @@
+<div class="selection-controls">
+  <button
+    class="outline-button"
+    (click)="selecting ? clearSelection() : (selecting = true)"
+  >
+    {{ selecting ? "Закончить выделение" : "Выбрать задачи" }}
+  </button>
+  @if (selecting) {
+    <button class="outline-button" (click)="selectAll()">
+      Выбрать все видимые · {{ selectableTasks.length }}
+    </button>
+  }
+</div>
+@if (selecting) {
+  <app-task-bulk [tasks]="selectedTasks" (cleared)="clearSelection()" />
+}
 <div class="list-layout" [class.with-agenda]="scope === 'today' && !search">
   <section class="task-list-content">
     @if (search) {
@@ -26,18 +42,28 @@
           </button>
         </div>
         @for (task of group.tasks; track task.id) {
-          <app-task-card
-            [class.drop-target]="dropTarget === task.id"
-            (dragover)="allowDrop($event); dropTarget = task.id"
-            (dragleave)="dropTarget = null"
-            (drop)="reorder($event, task)"
-            [task]="task"
-            [list]="listById(task.list_id)"
-            [disabled]="store.busy()"
-            (edit)="openTask($event)"
-            (toggle)="toggle($event)"
-            (taskChange)="store.patchTask($event.id, $event.patch)"
-          />
+          <div class="selectable-task">
+            @if (selecting) {
+              <input
+                type="checkbox"
+                [checked]="selected.has(task.id)"
+                (change)="select(task)"
+                [attr.aria-label]="'Выбрать: ' + task.title"
+              />
+            }
+            <app-task-card
+              [class.drop-target]="dropTarget === task.id"
+              (dragover)="allowDrop($event); dropTarget = task.id"
+              (dragleave)="dropTarget = null"
+              (drop)="reorder($event, task)"
+              [task]="task"
+              [list]="listById(task.list_id)"
+              [disabled]="store.busy()"
+              (edit)="openTask($event)"
+              (toggle)="toggle($event)"
+              (taskChange)="store.patchTask($event.id, $event.patch)"
+            />
+          </div>
         }
       </section>
     }
@@ -69,14 +95,24 @@
         </button>
         @if (store.preferences().showCompleted) {
           @for (task of completed; track task.id) {
-            <app-task-card
-              [task]="task"
-              [list]="listById(task.list_id)"
-              [disabled]="store.busy()"
-              (edit)="openTask($event)"
-              (toggle)="toggle($event)"
-              (taskChange)="store.patchTask($event.id, $event.patch)"
-            />
+            <div class="selectable-task">
+              @if (selecting) {
+                <input
+                  type="checkbox"
+                  [checked]="selected.has(task.id)"
+                  (change)="select(task)"
+                  [attr.aria-label]="'Выбрать: ' + task.title"
+                />
+              }
+              <app-task-card
+                [task]="task"
+                [list]="listById(task.list_id)"
+                [disabled]="store.busy()"
+                (edit)="openTask($event)"
+                (toggle)="toggle($event)"
+                (taskChange)="store.patchTask($event.id, $event.patch)"
+              />
+            </div>
           }
         }
       </section>

@@ -305,3 +305,25 @@ app-task-card.drop-target {
   border-top: 2px solid var(--mint);
   border-radius: 4px;
 }
+
+.selection-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.selectable-task {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  app-task-card {
+    flex: 1;
+    min-width: 0;
+  }
+  > input {
+    width: 22px;
+    height: 22px;
+    accent-color: var(--mint);
+    flex-shrink: 0;
+  }
+}

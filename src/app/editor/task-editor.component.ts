@@ -238,7 +238,11 @@ export class TaskEditorComponent implements OnInit {
     }
     if (!draft.start_time) draft.start_time = null;
     if (
-      await this.store.saveTask(draft, this.recurring ? this.scope : undefined)
+      await this.store.saveTask(
+        draft,
+        this.recurring ? this.scope : undefined,
+        this.originalTask,
+      )
     ) {
       this.saved.emit(draft);
       this.closed.emit();
@@ -268,7 +272,8 @@ export class TaskEditorComponent implements OnInit {
     this.task.subtasks = this.task.subtasks.filter((s) => s.id !== id);
   }
   async removeTask() {
-    if (await this.store.deleteTask(this.task)) this.closed.emit();
+    if (await this.store.deleteTask(this.task, this.originalTask))
+      this.closed.emit();
   }
   closeOverlays() {
     if (this.store.busy()) return;

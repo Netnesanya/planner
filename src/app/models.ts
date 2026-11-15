@@ -69,6 +69,7 @@ export interface TaskPatch {
   patch: Partial<Pick<Task, "duration" | "priority" | "progress_value">>;
 }
 export interface Preferences {
+  dailyCapacityHours?: number;
   view: string;
   showCompleted: boolean;
   sort: string;

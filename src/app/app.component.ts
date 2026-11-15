@@ -26,6 +26,7 @@ import { TaskEditorComponent } from "./editor/task-editor.component";
 import { CalendarTransferComponent } from "./integrations/calendar-transfer.component";
 import { FinanceViewComponent } from "./finance/finance-view.component";
 import { GoalsViewComponent } from "./goals/goals-view.component";
+import { SyncStatusComponent } from "./shared/sync-status.component";
 import { TaskUndoComponent } from "./shared/task-undo.component";
 type View = "list" | "kanban" | "calendar" | "timeline";
 @Component({
@@ -34,6 +35,7 @@ type View = "list" | "kanban" | "calendar" | "timeline";
   imports: [
     FormsModule,
     TaskUndoComponent,
+    SyncStatusComponent,
     IconComponent,
     ListViewComponent,
     KanbanViewComponent,
@@ -408,6 +410,7 @@ export class AppComponent {
     );
   }
   closeOverlays() {
+    if (this.editor && this.store.canRetry()) this.store.dismissRetry();
     this.editor = null;
     this.pendingCycleId = null;
     this.modal = null;

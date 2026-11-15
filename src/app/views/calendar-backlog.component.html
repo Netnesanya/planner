@@ -1,0 +1,63 @@
+<aside data-calendar-backlog [class.dropping]="dropping">
+  <header>
+    <h3>К планированию</h3>
+    <span>{{ visible.length }}</span>
+  </header>
+  <p>
+    Перетащите задачу в сетку или выберите дату и время. Перенос сюда убирает
+    дату.
+  </p>
+  <label
+    >Показать<select [(ngModel)]="filter">
+      <option value="all">Без даты и без времени</option>
+      <option value="undated">Только без даты</option>
+    </select></label
+  >
+  <div class="backlog-tasks">
+    @for (task of visible; track task.id) {
+      <article [attr.data-backlog-id]="task.id">
+        <button
+          class="backlog-drag"
+          [disabled]="busy"
+          (pointerdown)="move.emit({ event: $event, task })"
+          (click)="edit.emit(task)"
+          (dragstart)="$event.preventDefault()"
+        >
+          {{ task.title }}
+        </button>
+        <div>
+          <small
+            >{{ duration(task.duration) }} ·
+            {{ task.due_date || "Без даты" }}</small
+          ><button
+            [disabled]="busy"
+            (click)="choose(task)"
+            [attr.aria-label]="'Запланировать: ' + task.title"
+          >
+            В план
+          </button>
+        </div>
+      </article>
+    } @empty {
+      <p>Все задачи распределены. Можно оставить свободное время.</p>
+    }
+  </div>
+  @if (selected) {
+    <form (ngSubmit)="submit()">
+      <strong>{{ selected.title }}</strong
+      ><label
+        >Дата планирования<input
+          type="date"
+          name="date"
+          [(ngModel)]="targetDate"
+          required /></label
+      ><label
+        >Время планирования<input type="time" name="time" [(ngModel)]="time"
+      /></label>
+      <div>
+        <button type="button" (click)="selected = null">Отмена</button
+        ><button type="submit" [disabled]="busy">Запланировать</button>
+      </div>
+    </form>
+  }
+</aside>

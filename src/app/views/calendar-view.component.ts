@@ -17,6 +17,9 @@ import {
   Task,
   weekStart,
 } from "../models";
+import { CalendarBacklogComponent } from "./calendar-backlog.component";
+import { FormsModule } from "@angular/forms";
+import { dayLoad } from "../planner-workflows";
 interface ResizeState {
   task: Task;
   startY: number;
@@ -26,7 +29,7 @@ interface ResizeState {
 @Component({
   selector: "app-calendar-view",
   standalone: true,
-  imports: [IconComponent],
+  imports: [IconComponent, FormsModule, CalendarBacklogComponent],
   templateUrl: "./calendar-view.component.html",
   styleUrl: "./calendar-view.component.scss",
 })
@@ -40,7 +43,7 @@ export class CalendarViewComponent
     startX: number;
     startY: number;
     grabOffset: number;
-    date: string;
+    date: string | null;
     minute: number;
     active: boolean;
     allDay: boolean;
@@ -49,6 +52,38 @@ export class CalendarViewComponent
   private lastPointer: { x: number; y: number } | null = null;
   private scrollFrame = 0;
   ignoreClick = false;
+  backlogOpen = true;
+  capacity = this.store.preferences().dailyCapacityHours || 8;
+  saveCapacity() {
+    this.capacity = Math.max(1, Math.min(24, Number(this.capacity) || 8));
+    void this.store.savePreferences({ dailyCapacityHours: this.capacity });
+  }
+  get backlogTasks() {
+    const days = this.calendarDays;
+    return this.tasks.filter(
+      (t) =>
+        !t.is_milestone &&
+        t.status !== "done" &&
+        (!t.due_date || (!t.start_time && days.includes(t.due_date))),
+    );
+  }
+  load(date: string) {
+    return dayLoad(this.tasks, date);
+  }
+  async schedule(request: { task: Task; date: string; time: string }) {
+    const [h, m] = (request.time || "00:00").split(":").map(Number);
+    if (request.time && h * 60 + m + request.task.duration > 1440) {
+      this.store.error.set(
+        "Задача не помещается до конца дня. Выберите более раннее время.",
+      );
+      return;
+    }
+    await this.store.saveTask({
+      ...request.task,
+      due_date: request.date,
+      start_time: request.time || null,
+    });
+  }
   selectedDate = dateKey();
   calendarMode: "week" | "day" | "month" = "week";
   now = signal(new Date());
@@ -171,7 +206,7 @@ export class CalendarViewComponent
       startX: event.clientX,
       startY: event.clientY,
       grabOffset: event.clientY - rect.top,
-      date: task.due_date!,
+      date: task.due_date || this.selectedDate,
       minute: h * 60 + m,
       active: false,
       allDay: !task.start_time,
@@ -185,6 +220,25 @@ export class CalendarViewComponent
       state.active || Math.hypot(x - state.startX, y - state.startY) >= 5;
     if (!active) return;
     this.ignoreClick = true;
+    const backlog = this.host.nativeElement
+      .querySelector<HTMLElement>("[data-calendar-backlog]")
+      ?.getBoundingClientRect();
+    if (
+      backlog &&
+      x >= backlog.left &&
+      x <= backlog.right &&
+      y >= backlog.top &&
+      y <= backlog.bottom
+    ) {
+      this.moving.set({
+        ...state,
+        active,
+        allDay: true,
+        valid: true,
+        date: null,
+      });
+      return;
+    }
     const allDay = Array.from(
       this.host.nativeElement.querySelectorAll<HTMLElement>(
         "[data-all-day-date]",
@@ -339,7 +393,7 @@ export class CalendarViewComponent
           ...latest,
           due_date: moving.date,
           start_time: start,
-          repeat_anchor: Number(moving.date.slice(8)),
+          repeat_anchor: moving.date ? Number(moving.date.slice(8)) : null,
         });
       setTimeout(() => (this.ignoreClick = false), 0);
       return;

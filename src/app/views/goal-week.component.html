@@ -1,0 +1,61 @@
+<section class="goal-week">
+  <div>
+    <span>Результат цели</span
+    ><strong>{{
+      goal.status === "done"
+        ? "Достигнута"
+        : progress === null
+          ? "Не задан"
+          : progress + "%"
+    }}</strong>
+  </div>
+  @if (progress !== null) {
+    <progress
+      max="100"
+      [value]="progress"
+      aria-label="Прогресс результата цели"
+    ></progress>
+  }
+  @if (goal.progress_mode === "target") {
+    <small
+      >{{ goal.progress_value || 0 }} / {{ goal.progress_target }}
+      {{ goal.progress_unit }}</small
+    >
+  }
+  <div>
+    <span>Действия этой недели</span
+    ><strong>{{ done }} / {{ actions.length }}</strong>
+  </div>
+  <progress
+    [max]="actions.length || 1"
+    [value]="done"
+    aria-label="Выполнение действий недели"
+  ></progress>
+  @if (!actions.length) {
+    <p>На эту неделю нет связанных действий.</p>
+  }
+  @if (undated) {
+    <p>{{ undated }} связанных задач ещё без даты.</p>
+  }
+  <div class="actions">
+    <button (click)="add.emit()">Добавить действие</button>
+    @if (actions.length) {
+      <button (click)="expanded = !expanded" [attr.aria-expanded]="expanded">
+        {{ expanded ? "Скрыть" : "Показать" }} действия
+      </button>
+    }
+  </div>
+  @if (expanded) {
+    <ul>
+      @for (task of actions; track task.id) {
+        <li>
+          <button (click)="edit.emit(task)">
+            <span
+              >{{ task.status === "done" ? "✓" : "○" }} {{ task.title }}</span
+            ><small>{{ task.due_date }}</small>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</section>

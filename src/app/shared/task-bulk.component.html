@@ -1,0 +1,63 @@
+<form (ngSubmit)="apply()" class="bulk-toolbar" aria-label="Массовые действия">
+  <strong>Выбрано: {{ tasks.length }}</strong>
+  <label
+    >Действие<select aria-label="Действие" name="action" [(ngModel)]="action">
+      <option value="date">Перенести на дату</option>
+      <option value="undated">Убрать дату</option>
+      <option value="list">Сменить список</option>
+      <option value="tag">Добавить тег</option>
+      <option value="status">Изменить статус</option>
+    </select></label
+  >
+  @if (action === "date") {
+    <label
+      >Новая дата<input type="date" name="date" [(ngModel)]="date" required
+    /></label>
+  }
+  @if (action === "list") {
+    <label
+      >Новый список<select
+        aria-label="Новый список"
+        name="list"
+        [(ngModel)]="list"
+        required
+      >
+        <option value="" disabled>Выберите список</option>
+        @for (item of store.lists(); track item.id) {
+          <option [value]="item.id">{{ item.name }}</option>
+        }
+      </select></label
+    >
+  }
+  @if (action === "tag") {
+    <label
+      >Новый тег<input name="tag" [(ngModel)]="tag" maxlength="50" required
+    /></label>
+  }
+  @if (action === "status") {
+    <label
+      >Новый статус<select
+        aria-label="Новый статус"
+        name="status"
+        [(ngModel)]="status"
+      >
+        <option value="done">Выполнено</option>
+        <option value="todo">К выполнению</option>
+        <option value="doing">В работе</option>
+      </select></label
+    >
+  }
+  <button
+    class="primary-button"
+    type="submit"
+    [disabled]="!tasks.length || store.busy()"
+  >
+    Применить к {{ tasks.length }}</button
+  ><button class="outline-button" type="button" (click)="cleared.emit()">
+    Снять выделение
+  </button>
+  <p>
+    Повторения меняются только для выбранных экземпляров. Действие можно
+    отменить целиком.
+  </p>
+</form>

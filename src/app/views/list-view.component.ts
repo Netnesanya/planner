@@ -1,4 +1,5 @@
-import { Component } from "@angular/core";
+import { Component, OnChanges } from "@angular/core";
+import { TaskBulkComponent } from "../shared/task-bulk.component";
 import { IconComponent } from "../icon.component";
 import { TaskCardComponent } from "../task-card.component";
 import { TaskViewBase } from "../shared/task-view.base";
@@ -6,11 +7,40 @@ import { addDays, completionStats, Task } from "../models";
 @Component({
   selector: "app-list-view",
   standalone: true,
-  imports: [IconComponent, TaskCardComponent],
+  imports: [IconComponent, TaskCardComponent, TaskBulkComponent],
   templateUrl: "./list-view.component.html",
   styleUrl: "./list-view.component.scss",
 })
-export class ListViewComponent extends TaskViewBase {
+export class ListViewComponent extends TaskViewBase implements OnChanges {
+  selecting = false;
+  selected = new Map<string, Task>();
+  get selectableTasks() {
+    return [
+      ...this.pending,
+      ...(this.store.preferences().showCompleted ? this.completed : []),
+    ];
+  }
+  get selectedTasks() {
+    return [...this.selected.values()];
+  }
+  ngOnChanges() {
+    const visible = new Set(this.selectableTasks.map((t) => t.id));
+    for (const id of this.selected.keys())
+      if (!visible.has(id)) this.selected.delete(id);
+  }
+  select(task: Task) {
+    if (this.selected.has(task.id)) this.selected.delete(task.id);
+    else this.selected.set(task.id, structuredClone(task));
+  }
+  selectAll() {
+    for (const task of this.selectableTasks)
+      this.selected.set(task.id, structuredClone(task));
+  }
+  clearSelection() {
+    this.selected.clear();
+    this.selecting = false;
+  }
+
   dropTarget: string | null = null;
   async reorder(event: DragEvent, before: Task) {
     event.preventDefault();
