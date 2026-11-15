@@ -443,14 +443,12 @@ try {
   expect(occurrences).toHaveLength(84);
   expect(occurrences.every((t) => !t.start_time)).toBe(true);
   await page.getByRole("button", { name: "Календарь", exact: true }).click();
-  await expect
-    .poll(() =>
-      page
-        .locator(".all-day-task")
-        .filter({ hasText: allDayRoot.title })
-        .count(),
-    )
-    .toBeGreaterThan(1);
+  // The series starts today: on Sunday only one occurrence fits this week.
+  const weekday = new Date(allDayRoot.due_date + "T12:00:00Z").getUTCDay();
+  const remainingDays = 7 - ((weekday + 6) % 7);
+  await expect(
+    page.locator(".all-day-task").filter({ hasText: allDayRoot.title }),
+  ).toHaveCount(remainingDays);
   await page
     .getByRole("button", { name: "Следующий период", exact: true })
     .click();
